@@ -1,0 +1,37 @@
+<%
+    String adminRoot = request.getContextPath() + "/admin";
+    String adminRoute = (String) request.getAttribute("jakarta.servlet.forward.servlet_path");
+    boolean reviewQueue = "/admin/customers".equals(adminRoute) && "PENDING".equals(request.getParameter("status"));
+    String activeSection = reviewQueue ? "queue" : "/admin/dashboard".equals(adminRoute) ? "overview"
+            : "/admin/accounts".equals(adminRoute) ? "accounts" : "/admin/audit".equals(adminRoute) ? "audit" : "customers";
+    String[][] navLinks = {
+        {"overview", "/dashboard", "Overview"},
+        {"queue", "/customers?status=PENDING", "Review queue"},
+        {"customers", "/customers", "Customers"},
+        {"accounts", "/accounts", "Bank accounts"},
+        {"audit", "/audit", "Audit history"}
+    };
+%>
+<a class="console-skip" href="#admin-main">Skip to main content</a>
+<aside class="sidebar">
+    <a class="console-brand" href="<%= adminRoot %>/dashboard">
+        <span class="console-mark" aria-hidden="true">P</span>
+        <span>PROERP <small>Administration</small></span>
+    </a>
+    <nav class="admin-nav" aria-label="Administration">
+        <% for (String[] link : navLinks) { %>
+            <a href="<%= adminRoot + link[1] %>" <%= link[0].equals(activeSection) ? "class=\"active\" aria-current=\"page\"" : "" %>>
+                <%= link[2] %>
+            </a>
+        <% } %>
+    </nav>
+    <div class="sidebar-footer">
+        <div class="console-session">
+            <div><strong><%= com.netbanking.util.Html.escape((String) session.getAttribute("adminUsername")) %></strong><small>Administrator</small></div>
+        </div>
+        <form method="post" action="<%= adminRoot %>/logout">
+            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+            <button class="button button-outline" type="submit">Sign out</button>
+        </form>
+    </div>
+</aside>
