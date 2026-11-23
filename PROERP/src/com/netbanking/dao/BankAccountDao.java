@@ -8,9 +8,10 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.UUID;
+import java.security.SecureRandom;
 
 public class BankAccountDao {
+    private static final SecureRandom ACCOUNT_NUMBERS = new SecureRandom();
     private static final String SELECT = """
             SELECT a.*, u.username FROM bank_accounts a JOIN users u ON u.id=a.customer_id
             """;
@@ -25,12 +26,20 @@ public class BankAccountDao {
     }
 
     public List<BankAccount> list(Long customerId, String search, String status) throws SQLException {
+        return list(customerId, search, status, false);
+    }
+
+    public List<BankAccount> eligibleForPosting() throws SQLException {
+        return list(null, "", "ACTIVE", true);
+    }
+
+    private List<BankAccount> list(Long customerId, String search, String status, boolean activeCustomer) throws SQLException {
         String sql = SELECT + """
                 WHERE (? IS NULL OR a.customer_id=?)
                   AND (?='' OR LOCATE(?,a.account_number)>0 OR LOCATE(?,u.username)>0)
                   AND (?='' OR a.status=?)
-                ORDER BY a.id DESC LIMIT 200
-                """;
+                """ + (activeCustomer ? "AND u.status='ACTIVE' AND u.role='CUSTOMER' " : "")
+                + "ORDER BY a.id DESC LIMIT 200";
         List<BankAccount> accounts = new ArrayList<>();
         try (var connection = DatabaseConnection.getConnection();
              var statement = connection.prepareStatement(sql)) {
@@ -70,37 +79,39 @@ public class BankAccountDao {
                         }
                     }
                 }
-                try (var existing = connection.prepareStatement(
-                        "SELECT id FROM bank_accounts WHERE customer_id=? AND account_type=?")) {
-                    existing.setLong(1, customerId);
-                    existing.setString(2, type);
-                    try (var result = existing.executeQuery()) {
-                        if (result.next()) {
-                            connection.rollback();
-                            return 0;
-                        }
-                    }
-                }
-                String number = "NB" + UUID.randomUUID().toString().replace("-", "").substring(0, 16).toUpperCase(java.util.Locale.ROOT);
-                long id;
-                try (var insert = connection.prepareStatement(
-                        "INSERT INTO bank_accounts(customer_id,account_number,account_type) VALUES (?,?,?)",
-                        java.sql.Statement.RETURN_GENERATED_KEYS)) {
-                    insert.setLong(1, customerId);
-                    insert.setString(2, number);
-                    insert.setString(3, type);
-                    insert.executeUpdate();
-                    try (var keys = insert.getGeneratedKeys()) {
-                        if (!keys.next()) throw new SQLException("Missing account ID");
-                        id = keys.getLong(1);
-                    }
-                }
-                audit(connection, adminId, customerId, "ACCOUNT_OPENED", number, reason);
+                long id = openIfMissing(connection, customerId, adminId, type, reason);
                 connection.commit();
                 return id;
             } catch (SQLException exception) {
                 connection.rollback();
                 throw exception;
+            }
+        }
+    }
+
+    // The caller holds the customer's row lock or has just inserted the customer in this transaction.
+    static long openIfMissing(Connection connection, long customerId, long adminId, String type, String reason)
+            throws SQLException {
+        try (var existing = connection.prepareStatement(
+                "SELECT id FROM bank_accounts WHERE customer_id=? AND account_type=?")) {
+            existing.setLong(1, customerId);
+            existing.setString(2, type);
+            try (var result = existing.executeQuery()) {
+                if (result.next()) return 0;
+            }
+        }
+        String number = String.format(java.util.Locale.ROOT, "990%09d", ACCOUNT_NUMBERS.nextInt(1_000_000_000));
+        try (var insert = connection.prepareStatement(
+                "INSERT INTO bank_accounts(customer_id,account_number,account_type) VALUES (?,?,?)",
+                java.sql.Statement.RETURN_GENERATED_KEYS)) {
+            insert.setLong(1, customerId);
+            insert.setString(2, number);
+            insert.setString(3, type);
+            insert.executeUpdate();
+            try (var keys = insert.getGeneratedKeys()) {
+                if (!keys.next()) throw new SQLException("Missing account ID");
+                audit(connection, adminId, customerId, "ACCOUNT_OPENED", number, reason);
+                return keys.getLong(1);
             }
         }
     }
@@ -140,14 +151,14 @@ public class BankAccountDao {
         }
     }
 
-    private void audit(Connection connection, long adminId, long customerId, String event, String number, String reason)
+    private static void audit(Connection connection, long adminId, long customerId, String event, String number, String reason)
             throws SQLException {
         try (var statement = connection.prepareStatement(
                 "INSERT INTO admin_audit_log(admin_user_id,action,target_user_id,details) VALUES (?,?,?,?)")) {
             statement.setLong(1, adminId);
             statement.setString(2, event);
             statement.setLong(3, customerId);
-            statement.setString(4, "Account " + number + " | Reason: " + reason);
+            statement.setString(4, "Account " + number + (reason == null || reason.isBlank() ? "" : " | Note: " + reason.strip()));
             statement.executeUpdate();
         }
     }

@@ -1,0 +1,67 @@
+<%
+    boolean fullActivity = "activity".equals(section);
+    Long selectedAccount = (Long) request.getAttribute("selectedAccount");
+    Long activityPage = (Long) request.getAttribute("activityPage");
+    java.time.LocalDate fromDate = (java.time.LocalDate) request.getAttribute("fromDate");
+    java.time.LocalDate toDate = (java.time.LocalDate) request.getAttribute("toDate");
+    Category activityCategory = (Category) request.getAttribute("activityCategory");
+    String activitySearch = (String) request.getAttribute("activitySearch");
+    String pageLink = base + "/activity?" + (selectedAccount == null ? "" : "account=" + selectedAccount + "&amp;")
+        + (fromDate == null ? "" : "from=" + fromDate + "&amp;")
+        + (toDate == null ? "" : "to=" + toDate + "&amp;")
+        + (activityCategory == null || activityCategory == Category.ALL ? "" : "kind=" + activityCategory.name() + "&amp;")
+        + (activitySearch == null || activitySearch.isEmpty() ? "" : "q=" + java.net.URLEncoder.encode(activitySearch, java.nio.charset.StandardCharsets.UTF_8) + "&amp;")
+        + "page=";
+%>
+<section class="bank-panel activity-panel">
+    <div class="section-heading">
+        <h2><%= fullActivity ? "Transaction history" : "Recent activity" %></h2>
+        <% if (!fullActivity) { %>
+            <a href="<%= base %>/activity">All activity</a>
+        <% } %>
+    </div>
+    <% if (fullActivity && !accounts.isEmpty()) { %>
+        <form class="account-filter" method="get" action="<%= base %>/activity">
+            <div class="activity-filter-fields">
+                <label for="account">Account
+                    <select name="account" id="account">
+                        <option value="">All accounts</option>
+                        <% for (BankAccount account : accounts) { %>
+                            <option value="<%= account.id() %>" <%= Long.valueOf(account.id()).equals(selectedAccount) ? "selected" : "" %>><%= Html.escape(account.number()) %></option>
+                        <% } %>
+                    </select>
+                </label>
+                <label for="activity-kind">Transaction type
+                    <select name="kind" id="activity-kind">
+                        <% for (Category category : Category.values()) { %>
+                            <option value="<%= category.name() %>" <%= activityCategory == category ? "selected" : "" %>><%= category.label() %></option>
+                        <% } %>
+                    </select>
+                </label>
+                <label for="statement-from">From
+                    <input type="date" id="statement-from" name="from" value="<%= fromDate == null ? "" : fromDate.toString() %>">
+                </label>
+                <label for="statement-to">To
+                    <input type="date" id="statement-to" name="to" value="<%= toDate == null ? "" : toDate.toString() %>">
+                </label>
+                <label for="activity-search">Search
+                    <input id="activity-search" name="q" maxlength="80" placeholder="Reference or description" value="<%= Html.escape(activitySearch) %>">
+                </label>
+            </div>
+            <div class="bank-actions activity-filter-actions">
+                <button type="submit" class="bank-button">Apply filters</button>
+                <a href="<%= base %>/activity">Clear</a>
+                <button type="submit" class="bank-button secondary" formaction="<%= base %>/statement">Download CSV</button>
+                <button type="submit" class="bank-button secondary" name="format" value="print" formaction="<%= base %>/statement">Printable statement</button>
+            </div>
+        </form>
+    <% } %>
+    <%@ include file="activity-table.jspf" %>
+    <% if (fullActivity && (activityPage > 1 || Boolean.TRUE.equals(request.getAttribute("hasMore")))) { %>
+        <nav class="activity-pages" aria-label="Transaction pages">
+            <% if (activityPage > 1) { %><a href="<%= pageLink + (activityPage - 1) %>">Previous page</a><% } %>
+            <span>Page <%= activityPage %></span>
+            <% if (Boolean.TRUE.equals(request.getAttribute("hasMore"))) { %><a href="<%= pageLink + (activityPage + 1) %>">Next page</a><% } %>
+        </nav>
+    <% } %>
+</section>

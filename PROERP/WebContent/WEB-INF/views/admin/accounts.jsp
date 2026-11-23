@@ -55,15 +55,14 @@
                     <dt>Balance</dt><dd><strong>₹ <%= account.balance().toPlainString() %></strong></dd>
                     <dt>Opened</dt><dd><%= account.openedAt().format(dateFormat) %></dd>
                 </dl>
+                <a class="button button-outline" href="${pageContext.request.contextPath}/admin/finance?accountId=<%= account.id() %>">Deposits, loans and activity</a>
             </section>
             <section class="panel">
                 <h2><%= actionLabel %></h2>
                 <form method="post" action="${pageContext.request.contextPath}/admin/accounts">
-                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                    <input type="hidden" name="_csrf" value="${requestScope.csrfToken}">
                     <input type="hidden" name="action" value="<%= frozen ? "unfreeze" : "freeze" %>">
                     <input type="hidden" name="id" value="<%= account.id() %>">
-                    <label for="reason">Decision reason</label>
-                    <textarea id="reason" name="reason" maxlength="140" rows="3" required></textarea>
                     <button class="button <%= frozen ? "" : "button-danger" %>" type="submit"><%= actionLabel %></button>
                 </form>
             </section>
@@ -74,13 +73,11 @@
                 <h2>Open a bank account</h2>
                 <p class="muted">An approved customer can have one savings and one current account. New accounts start at ₹0.00.</p>
                 <form method="post" action="${pageContext.request.contextPath}/admin/accounts">
-                    <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+                    <input type="hidden" name="_csrf" value="${requestScope.csrfToken}">
                     <input type="hidden" name="action" value="open">
                     <input type="hidden" name="customerId" value="<%= customer.id() %>">
                     <label for="type">Account type</label>
                     <select id="type" name="type"><option value="SAVINGS">Savings</option><option value="CURRENT">Current</option></select>
-                    <label for="reason">Decision reason</label>
-                    <textarea id="reason" name="reason" maxlength="140" rows="2" required></textarea>
                     <button class="button" type="submit">Open account</button>
                 </form>
             </section>

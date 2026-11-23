@@ -1,0 +1,4 @@
+<% for (BankAccount optionAccount : activeAccounts) { %>
+    <option value="<%= optionAccount.id() %>"><%= "SAVINGS".equals(optionAccount.type()) ? "Savings" : "Current" %>
+        <%= Html.escape(optionAccount.number()) %> (<%= currency.format(optionAccount.balance()) %>)</option>
+<% } %>

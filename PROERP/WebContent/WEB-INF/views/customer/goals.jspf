@@ -1,0 +1,74 @@
+<%
+    List<Goal> savingsGoals = (List<Goal>) request.getAttribute("goals");
+    BigDecimal goalTotal = savingsGoals.stream().map(Goal::saved).reduce(BigDecimal.ZERO, BigDecimal::add);
+%>
+<dl class="bank-summary loan-summary">
+    <div><dt>Total set aside</dt><dd><%= currency.format(goalTotal) %></dd></div>
+</dl>
+<div class="bank-service-grid">
+    <section class="bank-panel form-panel">
+        <h2>Create a savings goal</h2>
+        <p class="subtle">Set money aside from your linked account and move it back when you need it.</p>
+        <% if (activeAccounts.isEmpty()) { %>
+            <p class="bank-notice">You need an active account to start a savings goal.</p>
+        <% } else { %>
+            <form class="bank-form" method="post" action="<%= base %>/goals">
+                <input type="hidden" name="_csrf" value="${requestScope.csrfToken}">
+                <input type="hidden" name="requestKey" value="${requestScope.requestKey}">
+                <label for="goal-name">Goal name
+                    <input id="goal-name" name="name" maxlength="60" placeholder="Emergency fund" required>
+                </label>
+                <label for="goal-account">Linked account
+                    <select id="goal-account" name="source" required><%@ include file="account-options.jspf" %></select>
+                </label>
+                <label for="goal-target">Target (&#8377;)
+                    <input id="goal-target" name="amount" inputmode="decimal" pattern="[0-9]{1,9}([.][0-9]{1,2})?" maxlength="12" required>
+                </label>
+                <button class="bank-button" type="submit" name="action" value="create">Create goal</button>
+            </form>
+        <% } %>
+    </section>
+
+    <section class="bank-panel">
+        <h2>Your savings goals</h2>
+        <% if (savingsGoals.isEmpty()) { %><p class="subtle panel-message">You have no active savings goals.</p><% } %>
+        <% for (Goal goal : savingsGoals) {
+            boolean funded = goal.saved().signum() > 0;
+            boolean complete = goal.saved().compareTo(goal.target()) >= 0;
+        %>
+            <article class="goal-card">
+                <div class="section-heading">
+                    <h3><%= Html.escape(goal.name()) %></h3>
+                    <% if (complete) { %><span class="bank-status">Target reached</span><% } %>
+                </div>
+                <p class="subtle">Goal #<%= goal.id() %>, account <%= Html.escape(goal.account()) %></p>
+                <p><strong><%= currency.format(goal.saved()) %></strong> saved of <%= currency.format(goal.target()) %></p>
+                <progress class="goal-progress" max="<%= goal.target().toPlainString() %>" value="<%= goal.saved().toPlainString() %>"
+                    aria-label="Progress for <%= Html.escape(goal.name()) %>"></progress>
+                <% if (goal.accountActive()) { %>
+                    <details class="bank-disclosure">
+                        <summary>Move money</summary>
+                        <form class="bank-form" method="post" action="<%= base %>/goals">
+                            <input type="hidden" name="_csrf" value="${requestScope.csrfToken}">
+                            <input type="hidden" name="productId" value="<%= goal.id() %>">
+                            <input type="hidden" name="source" value="<%= goal.accountId() %>">
+                            <input type="hidden" name="requestKey" value="<%= UUID.randomUUID() %>">
+                            <label>Amount (&#8377;)<input name="amount" inputmode="decimal" pattern="[0-9]{1,9}([.][0-9]{1,2})?" maxlength="12" required></label>
+                            <div class="bank-actions">
+                                <% if (!complete) { %><button class="bank-button" type="submit" name="action" value="fund">Set aside</button><% } %>
+                                <% if (funded) { %><button class="bank-button secondary" type="submit" name="action" value="withdraw">Move back to account</button><% } %>
+                            </div>
+                        </form>
+                    </details>
+                <% } else { %><p class="subtle">The linked account must be active to move money.</p><% } %>
+                <% if (!funded) { %>
+                    <form class="bank-actions" method="post" action="<%= base %>/goals">
+                        <input type="hidden" name="_csrf" value="${requestScope.csrfToken}">
+                        <input type="hidden" name="productId" value="<%= goal.id() %>">
+                        <button class="bank-button secondary" type="submit" name="action" value="close">Close goal</button>
+                    </form>
+                <% } %>
+            </article>
+        <% } %>
+    </section>
+</div>

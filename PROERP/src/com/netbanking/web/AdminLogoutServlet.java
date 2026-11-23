@@ -1,5 +1,6 @@
 package com.netbanking.web;
 
+import com.netbanking.security.PortalSession;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,7 +14,7 @@ public class AdminLogoutServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
         HttpSession session = request.getSession(false);
         if (session != null) {
-            session.invalidate();
+            PortalSession.clearAdmin(session);
         }
         response.sendRedirect(request.getContextPath() + "/admin/login");
     }

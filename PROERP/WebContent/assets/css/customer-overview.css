@@ -1,0 +1,143 @@
+.customer-overview .bank-main {
+    width: 100%;
+    margin: 0;
+    padding: clamp(18px, 2.5vw, 34px);
+}
+.customer-overview .bank-heading { margin-bottom: 15px; }
+.customer-overview h1 { font-size: clamp(25px, 3.2vw, 38px); }
+.customer-overview h4 { font-size: 14px; margin: 0; }
+.overview-shortcuts {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 5px 10px;
+    padding: 7px;
+    margin-bottom: 19px;
+    background: #fff;
+    border: 1px solid var(--bank-border);
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+}
+.overview-shortcuts a { padding: 7px 10px; text-decoration: none; border-radius: 5px; }
+.overview-shortcuts a:hover { background: #f0eee7; text-decoration: underline; }
+.overview-shortcuts a[aria-current="page"] { color: white; background: var(--bank-accent); }
+.overview-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 2.3fr) minmax(268px, 1fr);
+    align-items: start;
+    gap: clamp(14px, 2vw, 24px);
+}
+.overview-primary, .overview-secondary { display: grid; align-items: start; min-width: 0; gap: 19px; }
+.overview-layout.overview-focused { grid-template-columns: minmax(0, 1fr); max-width: 900px; }
+.overview-focused .overview-card-list { grid-template-columns: repeat(auto-fit, minmax(min(100%, 245px), 340px)); }
+.overview-finances, .overview-account { overflow: hidden; background: #fff; border: 1px solid var(--bank-border); border-radius: 10px; }
+.customer-overview .overview-balance {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    padding: clamp(16px, 2.2vw, 24px);
+    border-radius: 0;
+    background: #35382d;
+}
+.overview-balance strong {
+    display: block;
+    font-size: clamp(26px, 4vw, 45px);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+.customer-overview .overview-balance p { font-size: 13px; }
+.overview-flow { padding: clamp(12px, 2vw, 22px); }
+.overview-flow .subtle, .flow-totals dt, .flow-data { font-size: 13px; }
+.flow-totals { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.flow-totals dt::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; }
+.flow-in::before, .flow-credit { background: #445b41; }
+.flow-out::before, .flow-debit { background: #aa7651; }
+.flow-totals dd { font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.flow-chart {
+    --plot-height: 152px;
+    --scale-width: 48px;
+    display: grid;
+    grid-template-columns: var(--scale-width) minmax(0, 1fr);
+    position: relative;
+    margin: 18px 0 8px;
+}
+.flow-gridlines, .flow-scale { display: flex; flex-direction: column; justify-content: space-between; height: var(--plot-height); }
+.flow-gridlines { position: absolute; inset: 0 0 auto var(--scale-width); pointer-events: none; }
+.flow-gridlines span { border-top: 1px solid #e7e4db; }
+.flow-gridlines span:last-child { border-color: #c3c5b7; }
+.flow-scale { align-items: start; font-size: 10px; line-height: 1; color: var(--bank-muted); font-variant-numeric: tabular-nums; }
+.flow-days { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); position: relative; text-align: center; }
+.flow-bars { display: flex; height: var(--plot-height); justify-content: center; align-items: end; gap: clamp(2px, .5vw, 6px); padding: 0 2px; }
+.flow-bars span { height: var(--amount); width: min(32%, 19px); border-radius: 3px 3px 0 0; }
+.flow-label { display: block; color: var(--bank-muted); font-size: 11px; line-height: 1.2; padding-top: 5px; }
+.flow-data { margin-top: 9px; }
+.flow-data summary { cursor: pointer; width: fit-content; }
+.flow-data table { margin-top: 8px; }
+.overview-accounts > h2, .overview-cards > h2 { margin-bottom: 8px; }
+.overview-account + .overview-account { margin-top: 10px; }
+.overview-account-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px 13px;
+    flex-wrap: wrap;
+    background: #f1f0e9;
+    padding: 13px 16px;
+    border-bottom: 1px solid var(--bank-border);
+}
+.overview-amount { display: flex; align-items: center; flex-wrap: wrap; gap: 5px 9px; font-size: 18px; overflow-wrap: anywhere; }
+.account-recent { padding: 12px 16px 4px; }
+.account-recent p, .card-activity p { margin: 8px 0; }
+.overview-transactions { margin: 6px 0 0; padding: 0; list-style: none; }
+.overview-transactions li {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 6px 10px;
+    flex-wrap: wrap;
+    padding: 8px 0;
+    border-top: 1px solid var(--bank-border);
+    font-size: 13px;
+    overflow-wrap: anywhere;
+}
+.overview-transactions small { display: block; font-size: 12px; color: var(--bank-muted); }
+.overview-transaction-amount { text-align: right; font-variant-numeric: tabular-nums; }
+.overview-transaction-amount .incoming { color: #3c5639; }
+.overview-card-list { display: grid; gap: 9px; }
+.overview-card-face {
+    display: grid;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid #4c503f;
+    border-radius: 11px;
+    background: #34392f;
+    color: #fff;
+    text-decoration: none;
+}
+.overview-card-face:hover, .overview-card-face.selected { background: #454c3a; }
+.overview-card-face:hover .virtual-number, .overview-card-face:focus-visible .virtual-number { text-decoration: underline; text-underline-offset: 3px; }
+.virtual-card-top, .virtual-card-bottom { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; }
+.virtual-card-top strong { font-size: 13px; letter-spacing: .08em; }
+.virtual-card-top span, .virtual-card-bottom { color: #e6e5d8; font-size: 12px; overflow-wrap: anywhere; }
+.virtual-chip { width: 27px; height: 19px; border-radius: 4px; border: 1px solid #a9a389; background: #d6cdb1; }
+.virtual-number { font-size: 20px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.overview-card-details { margin-top: 12px; padding: 13px; }
+.overview-card-facts { margin: 8px 0; font-size: 13px; }
+.overview-card-facts > div { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 3px 12px; padding: 5px 0; border-bottom: 1px solid var(--bank-border); }
+.overview-card-facts dd { font-weight: 650; }
+.card-activity { margin-top: 12px; }
+.customer-overview .overview-position { border-top: 1px solid var(--bank-border); padding: 12px 2px 0; font-size: 13px; }
+.customer-overview .overview-position h2 { font-size: 16px; }
+
+@media (max-width: 960px) {
+    .overview-layout { grid-template-columns: minmax(0, 1fr); }
+    .overview-card-list { grid-template-columns: repeat(auto-fit, minmax(min(100%, 235px), 1fr)); }
+}
+@media (max-width: 460px) {
+    .customer-overview .bank-main { padding: 13px; }
+    .flow-chart { --plot-height: 116px; --scale-width: 40px; }
+    .flow-label { font-size: 10px; }
+}

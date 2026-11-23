@@ -1,0 +1,154 @@
+<%
+    List<Card> dashboardCards = (List<Card>) request.getAttribute("cards");
+    List<Application> dashboardApplications = (List<Application>) request.getAttribute("applications");
+    List<Deposit> dashboardDeposits = (List<Deposit>) request.getAttribute("deposits");
+    List<Goal> dashboardGoals = (List<Goal>) request.getAttribute("goals");
+    List<DailyFlow> dailyFlow = (List<DailyFlow>) request.getAttribute("dailyFlow");
+    Map<Long, List<Activity>> recentByAccount = (Map<Long, List<Activity>>) request.getAttribute("recentByAccount");
+    Card selectedCard = (Card) request.getAttribute("selectedCard");
+    BigDecimal heldInGoals = dashboardGoals.stream().map(Goal::saved).reduce(BigDecimal.ZERO, BigDecimal::add);
+    long pendingApplications = dashboardApplications.stream().filter(item -> "PENDING".equals(item.status())).count();
+    BigDecimal heldInDeposits = dashboardDeposits.stream().filter(item -> !item.redeemed())
+            .map(Deposit::principal).reduce(BigDecimal.ZERO, BigDecimal::add);
+    BigDecimal credits = dailyFlow.stream().map(DailyFlow::credits).reduce(BigDecimal.ZERO, BigDecimal::add);
+    BigDecimal debits = dailyFlow.stream().map(DailyFlow::debits).reduce(BigDecimal.ZERO, BigDecimal::add);
+    BigDecimal peak = dailyFlow.stream().map(day -> day.credits().max(day.debits())).max(BigDecimal::compareTo).orElse(BigDecimal.ZERO);
+    BigDecimal unit = BigDecimal.ONE.scaleByPowerOfTen(Math.max(0, peak.precision() - peak.scale() - 2));
+    BigDecimal tick = peak.divide(unit.multiply(BigDecimal.valueOf(4)), 0, RoundingMode.CEILING).multiply(unit).max(BigDecimal.ONE);
+    BigDecimal graphMax = tick.multiply(BigDecimal.valueOf(4));
+    NumberFormat compact = NumberFormat.getCompactNumberInstance(Locale.forLanguageTag("en-IN"), NumberFormat.Style.SHORT);
+    compact.setMaximumFractionDigits(1);
+    DateTimeFormatter graphDate = DateTimeFormatter.ofPattern("dd MMM", Locale.ENGLISH);
+    String overviewUrl = base + "/overview";
+    boolean accountsView = "accounts".equals(request.getParameter("view"));
+    boolean cardsView = "cards".equals(request.getParameter("view"));
+    boolean summaryView = !accountsView && !cardsView;
+    String cardsPageUrl = overviewUrl + (cardsView ? "?view=cards" : "");
+    String cardQuery = cardsView ? "&amp;card=" : "?card=";
+%>
+<nav class="overview-shortcuts" aria-label="Overview views">
+    <a href="<%= overviewUrl %>" <%= summaryView ? "aria-current=\"page\"" : "" %>>Summary</a>
+    <a href="<%= overviewUrl %>?view=accounts" <%= accountsView ? "aria-current=\"page\"" : "" %>>My accounts</a>
+    <a href="<%= overviewUrl %>?view=cards" <%= cardsView ? "aria-current=\"page\"" : "" %>>My cards</a>
+</nav>
+
+<div class="overview-layout<%= summaryView ? "" : " overview-focused" %>">
+    <% if (!cardsView) { %>
+    <div class="overview-primary">
+        <% if (summaryView) { %>
+        <section class="overview-finances" aria-labelledby="overview-balance-title">
+            <div class="overview-balance">
+                <div>
+                    <h2 id="overview-balance-title">Total account balance</h2>
+                    <strong><%= currency.format(total) %></strong>
+                    <p><%= accounts.size() %> <%= accounts.size() == 1 ? "linked account" : "linked accounts" %></p>
+                </div>
+            </div>
+            <div class="overview-flow">
+                <div class="section-heading">
+                    <div>
+                        <h2>Money in and out</h2>
+                        <p class="subtle"><%= dailyFlow.get(0).date().format(graphDate) %> to <%= dailyFlow.get(6).date().format(graphDate) %></p>
+                    </div>
+                    <dl class="flow-totals">
+                        <div><dt class="flow-in">Money in</dt><dd><%= currency.format(credits) %></dd></div>
+                        <div><dt class="flow-out">Money out</dt><dd><%= currency.format(debits) %></dd></div>
+                    </dl>
+                </div>
+                <div class="flow-chart" aria-hidden="true">
+                    <div class="flow-gridlines"><span></span><span></span><span></span><span></span><span></span></div>
+                    <div class="flow-scale">
+                        <% for (int step = 4; step >= 0; step--) { %><span>&#8377;<%= compact.format(tick.multiply(BigDecimal.valueOf(step))) %></span><% } %>
+                    </div>
+                    <div class="flow-days">
+                        <% for (DailyFlow day : dailyFlow) {
+                            BigDecimal incoming = day.credits().multiply(BigDecimal.valueOf(100)).divide(graphMax, 3, RoundingMode.HALF_UP);
+                            BigDecimal outgoing = day.debits().multiply(BigDecimal.valueOf(100)).divide(graphMax, 3, RoundingMode.HALF_UP);
+                        %>
+                            <div class="flow-day" title="<%= day.date().format(graphDate) %>, in <%= currency.format(day.credits()) %>, out <%= currency.format(day.debits()) %>">
+                                <div class="flow-bars">
+                                    <span class="flow-credit" style="--amount: <%= incoming.toPlainString() %>%"></span>
+                                    <span class="flow-debit" style="--amount: <%= outgoing.toPlainString() %>%"></span>
+                                </div>
+                                <span class="flow-label"><%= day.date().format(graphDate) %></span>
+                            </div>
+                        <% } %>
+                    </div>
+                </div>
+                <% if (peak.signum() == 0) { %><p class="subtle">No transactions posted in the last seven days.</p><% } %>
+                <details class="flow-data">
+                    <summary>View daily amounts</summary>
+                    <table class="bank-table">
+                        <thead><tr><th scope="col">Date</th><th scope="col" class="numeric">Money in</th><th scope="col" class="numeric">Money out</th></tr></thead>
+                        <tbody><% for (DailyFlow day : dailyFlow) { %>
+                            <tr><th scope="row"><%= day.date().format(graphDate) %></th><td class="numeric"><%= currency.format(day.credits()) %></td><td class="numeric"><%= currency.format(day.debits()) %></td></tr>
+                        <% } %></tbody>
+                    </table>
+                </details>
+            </div>
+        </section>
+        <% } %>
+
+        <section id="overview-accounts" class="overview-accounts" aria-labelledby="overview-accounts-title">
+            <h2 id="overview-accounts-title">My accounts</h2>
+            <% if (accounts.isEmpty()) { %>
+                <p class="bank-panel subtle">You have no bank accounts yet. Contact your administrator to open one.</p>
+            <% } %>
+            <% for (BankAccount account : accounts) {
+                boolean frozen = "FROZEN".equals(account.status());
+                List<Activity> recent = recentByAccount.get(account.id());
+            %>
+                <article class="overview-account">
+                    <div class="overview-account-heading">
+                        <div>
+                            <h3><%= "SAVINGS".equals(account.type()) ? "Savings account" : "Current account" %></h3>
+                            <p class="subtle"><%= Html.escape(account.number()) %></p>
+                        </div>
+                        <div class="overview-amount"><strong><%= currency.format(account.balance()) %></strong>
+                            <span class="bank-status <%= frozen ? "caution" : "" %>"><%= frozen ? "Frozen" : "Active" %></span>
+                        </div>
+                    </div>
+                    <div class="account-recent">
+                        <div class="section-heading">
+                            <h4>Recent transactions</h4>
+                            <a href="<%= base %>/activity?account=<%= account.id() %>">View full activity</a>
+                        </div>
+                        <% if (recent.isEmpty()) { %><p class="subtle">No transactions on this account yet.</p><% } %>
+                        <ul class="overview-transactions">
+                            <% for (Activity row : recent) { %>
+                                <li>
+                                    <div><strong><%= row.label() %></strong>
+                                        <% if (row.description() != null) { %><small><%= Html.escape(row.description()) %></small><% } %>
+                                        <small><%= row.postedAt().format(timestamp) %></small>
+                                    </div>
+                                    <div class="overview-transaction-amount">
+                                        <strong class="<%= row.debit() ? "" : "incoming" %>"><%= row.debit() ? "-" : "+" %><%= currency.format(row.amount()) %></strong>
+                                        <small>Balance <%= currency.format(row.balance()) %></small>
+                                    </div>
+                                </li>
+                            <% } %>
+                        </ul>
+                    </div>
+                </article>
+            <% } %>
+        </section>
+    </div>
+    <% } %>
+
+    <% if (!accountsView) { %>
+    <div class="overview-secondary">
+        <%@ include file="overview-cards.jspf" %>
+        <% if (summaryView) { %>
+        <section class="overview-position" aria-labelledby="overview-position-title">
+            <h2 id="overview-position-title">Savings and borrowing</h2>
+            <dl>
+                <div><dt><a href="<%= base %>/deposits">Fixed deposits</a></dt><dd><%= heldInDeposits.signum() > 0 ? currency.format(heldInDeposits) : "None open" %></dd></div>
+                <div><dt><a href="<%= base %>/goals">Savings goals</a></dt><dd><%= heldInGoals.signum() > 0 ? currency.format(heldInGoals) : "Nothing set aside" %></dd></div>
+                <div><dt><a href="<%= base %>/loans">Loan principal due</a></dt><dd><%= outstanding.signum() > 0 ? currency.format(outstanding) : "Nothing due" %></dd></div>
+            </dl>
+            <% if (pendingApplications > 0) { %><a href="<%= base %>/loans">View pending loan applications (<%= pendingApplications %>)</a><% } %>
+        </section>
+        <% } %>
+    </div>
+    <% } %>
+</div>

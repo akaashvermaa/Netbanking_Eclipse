@@ -20,6 +20,10 @@ public class AdminAccountsServlet extends HttpServlet {
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
         Long id = positiveId(request.getParameter("id"));
         Long customerId = positiveId(request.getParameter("customerId"));
+        if (id == null && customerId == null && request.getParameter("q") == null) {
+            response.sendRedirect(request.getContextPath() + "/admin/customers");
+            return;
+        }
         if ((request.getParameter("id") != null && id == null)
                 || (request.getParameter("customerId") != null && customerId == null)) {
             response.sendError(400, "Invalid account or customer ID.");
@@ -70,8 +74,8 @@ public class AdminAccountsServlet extends HttpServlet {
             response.sendError(403);
             return;
         }
-        if (reason == null || reason.isBlank() || reason.strip().length() > 140) {
-            response.sendError(400, "Enter a reason between 1 and 140 characters.");
+        if (reason != null && reason.strip().length() > 140) {
+            response.sendError(400, "Notes can contain up to 140 characters.");
             return;
         }
         String route = request.getContextPath() + "/admin/accounts";
@@ -83,17 +87,23 @@ public class AdminAccountsServlet extends HttpServlet {
                     response.sendError(400, "Choose a customer and valid account type.");
                     return;
                 }
-                long id = accounts.open(customer, adminId.longValue(), type, reason.strip());
-                response.sendRedirect(id == 0 ? route + "?customerId=" + customer + "&result=unavailable"
-                        : route + "?id=" + id + "&result=opened");
+                long id = accounts.open(customer, adminId.longValue(), type, reason);
+                response.sendRedirect(id == 0
+                        ? request.getContextPath() + "/admin/customer?id=" + customer + "&result=account-unavailable"
+                        : request.getContextPath() + "/admin/customer?id=" + customer + "&result=account-opened");
             } else if ("freeze".equals(action) || "unfreeze".equals(action)) {
                 Long id = positiveId(request.getParameter("id"));
                 if (id == null) {
                     response.sendError(400, "Invalid account ID.");
                     return;
                 }
-                boolean changed = accounts.setFrozen(id, adminId.longValue(), "freeze".equals(action), reason.strip());
-                response.sendRedirect(route + "?id=" + id + "&result=" + (changed ? "updated" : "unchanged"));
+                var acc = accounts.find(id);
+                boolean changed = accounts.setFrozen(id, adminId.longValue(), "freeze".equals(action), reason);
+                if (acc.isPresent()) {
+                    response.sendRedirect(request.getContextPath() + "/admin/customer?id=" + acc.get().customerId() + "&result=" + (changed ? "account-updated" : "unchanged"));
+                } else {
+                    response.sendRedirect(request.getContextPath() + "/admin/customers");
+                }
             } else {
                 response.sendError(400, "Invalid account action.");
             }

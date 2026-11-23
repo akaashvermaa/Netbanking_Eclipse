@@ -1,0 +1,64 @@
+<%
+    boolean missingPhone = customer.phone() == null || customer.phone().isBlank();
+    String mailingLine = customer.addressLine() == null ? "" : customer.addressLine();
+    String mailingCity = customer.city() == null ? "" : customer.city();
+    String mailingRegion = customer.region() == null ? "" : customer.region();
+    String mailingPostal = customer.postalCode() == null ? "" : customer.postalCode();
+    boolean hasAddress = !mailingLine.isBlank() || !mailingCity.isBlank() || !mailingRegion.isBlank() || !mailingPostal.isBlank();
+%>
+<section class="profile-header-card" aria-labelledby="profile-name">
+    <div>
+        <h2 id="profile-name"><%= Html.escape(customer.name()) %></h2>
+        <p>Customer #<%= customer.id() %><% if (customer.joinedAt() != null) { %>, joined <%= customer.joinedAt().format(date) %><% } %></p>
+    </div>
+    <a class="bank-button secondary" href="<%= base %>/services?category=CONTACT_UPDATE">Request a profile update</a>
+</section>
+
+<div class="profile-layout">
+    <div class="profile-primary">
+        <section class="bank-panel profile-panel" id="profile-contact" aria-labelledby="profile-contact-title">
+            <h2 id="profile-contact-title">Contact details</h2>
+            <% if ("phone_saved".equals(result)) { %><p class="bank-notice success" role="status">Phone number saved.</p><% } %>
+            <% if ("phone_existing".equals(result)) { %><p class="bank-notice" role="status">There is already a phone number on file. Request an update to change it.</p><% } %>
+            <% if ("phone_unavailable".equals(result)) { %><p class="bank-notice error" role="alert">The phone number could not be saved. Try again.</p><% } %>
+            <dl class="profile-fields">
+                <div><dt>Full name</dt><dd><%= Html.escape(customer.name()) %></dd></div>
+                <div><dt>Email address</dt><dd><%= customer.email() == null ? "Not on file" : Html.escape(customer.email()) %></dd></div>
+                <div><dt>Phone number</dt><dd><%= missingPhone ? "Required" : Html.escape(customer.phone()) %></dd></div>
+            </dl>
+            <% if (missingPhone) { %>
+                <% if ("phone_invalid".equals(result)) { %><p class="bank-notice error" role="alert">Enter a phone number with 7 to 15 digits.</p><% } %>
+                <form class="bank-form profile-phone-form" method="post" action="<%= base %>/profile">
+                    <input type="hidden" name="_csrf" value="${requestScope.csrfToken}">
+                    <label for="profile-phone">Add your phone number
+                        <input id="profile-phone" name="phone" type="tel" autocomplete="tel" maxlength="25" required>
+                    </label>
+                    <button class="bank-button" type="submit">Save phone number</button>
+                </form>
+            <% } %>
+        </section>
+        <section class="bank-panel profile-panel" aria-labelledby="mailing-title">
+            <h2 id="mailing-title">Mailing address</h2>
+            <% if (hasAddress) { %>
+                <dl class="profile-fields">
+                    <div class="profile-wide"><dt>Street address</dt><dd><%= mailingLine.isBlank() ? "Not on file" : Html.escape(mailingLine) %></dd></div>
+                    <div><dt>City</dt><dd><%= mailingCity.isBlank() ? "Not on file" : Html.escape(mailingCity) %></dd></div>
+                    <div><dt>State or region</dt><dd><%= mailingRegion.isBlank() ? "Not on file" : Html.escape(mailingRegion) %></dd></div>
+                    <div><dt>Postal code</dt><dd><%= mailingPostal.isBlank() ? "Not on file" : Html.escape(mailingPostal) %></dd></div>
+                </dl>
+            <% } else { %><p class="subtle panel-message">No mailing address on file.</p><% } %>
+        </section>
+    </div>
+    <aside class="profile-secondary" aria-label="Banking access">
+        <section class="bank-panel profile-panel" aria-labelledby="profile-access-title">
+            <h2 id="profile-access-title">Online banking access</h2>
+            <dl class="identity-facts">
+                <div><dt>Username</dt><dd><%= Html.escape(customer.username()) %></dd></div>
+                <div><dt>Linked accounts</dt><dd><a href="<%= base %>/overview?view=accounts"><%= request.getAttribute("accountCount") %></a></dd></div>
+                <div><dt>Identity verification (KYC)</dt><dd><span class="bank-status <%= "Verified".equals(kyc) ? "" : "caution" %>"><%= kyc %></span></dd></div>
+                <% if (customer.kycRecordedAt() != null) { %><div><dt>KYC recorded</dt><dd><%= customer.kycRecordedAt().format(date) %></dd></div><% } %>
+            </dl>
+            <a class="bank-button secondary profile-password" href="<%= base %>/password">Change password</a>
+        </section>
+    </aside>
+</div>

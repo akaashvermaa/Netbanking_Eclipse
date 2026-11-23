@@ -1,14 +1,18 @@
 <%
     String adminRoot = request.getContextPath() + "/admin";
     String adminRoute = (String) request.getAttribute("jakarta.servlet.forward.servlet_path");
-    boolean reviewQueue = "/admin/customers".equals(adminRoute) && "PENDING".equals(request.getParameter("status"));
-    String activeSection = reviewQueue ? "queue" : "/admin/dashboard".equals(adminRoute) ? "overview"
-            : "/admin/accounts".equals(adminRoute) ? "accounts" : "/admin/audit".equals(adminRoute) ? "audit" : "customers";
+    String activeSection = "/admin/queue".equals(adminRoute) ? "queue"
+            : "/admin/dashboard".equals(adminRoute) ? "overview"
+            : "/admin/finance".equals(adminRoute) ? "finance"
+            : "/admin/requests".equals(adminRoute) ? "requests"
+            : "/admin/audit".equals(adminRoute) ? "audit"
+            : "/admin/password".equals(adminRoute) ? "password" : "customers";
     String[][] navLinks = {
         {"overview", "/dashboard", "Overview"},
-        {"queue", "/customers?status=PENDING", "Review queue"},
-        {"customers", "/customers", "Customers"},
-        {"accounts", "/accounts", "Bank accounts"},
+        {"queue", "/queue", "Review queue"},
+        {"customers", "/customers", "Customers & Accounts"},
+        {"finance", "/finance", "Balances & Loans"},
+        {"requests", "/requests", "Customer requests"},
         {"audit", "/audit", "Audit history"}
     };
 %>
@@ -28,9 +32,10 @@
     <div class="sidebar-footer">
         <div class="console-session">
             <div><strong><%= com.netbanking.util.Html.escape((String) session.getAttribute("adminUsername")) %></strong><small>Administrator</small></div>
+            <a class="console-sublink" href="<%= adminRoot %>/password">Change password</a>
         </div>
         <form method="post" action="<%= adminRoot %>/logout">
-            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+            <input type="hidden" name="_csrf" value="${requestScope.csrfToken}">
             <button class="button button-outline" type="submit">Sign out</button>
         </form>
     </div>

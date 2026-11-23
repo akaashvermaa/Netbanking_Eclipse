@@ -1,0 +1,8 @@
+CREATE TABLE IF NOT EXISTS account_review_flags (
+    account_id BIGINT UNSIGNED PRIMARY KEY,
+    category ENUM('ACCOUNT_REVIEW','BALANCE_CHECK','LOAN_FOLLOW_UP') NOT NULL,
+    flagged_by BIGINT UNSIGNED NOT NULL,
+    flagged_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (account_id) REFERENCES bank_accounts(id),
+    FOREIGN KEY (flagged_by) REFERENCES users(id)
+) ENGINE=InnoDB;

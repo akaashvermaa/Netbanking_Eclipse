@@ -1,0 +1,96 @@
+<%
+    LoanTerms quote = (LoanTerms) request.getAttribute("loanQuote");
+    BigDecimal quoteAmount = (BigDecimal) request.getAttribute("loanQuoteAmount");
+    BankAccount quoteAccount = (BankAccount) request.getAttribute("loanQuoteAccount");
+    String quotePurpose = (String) request.getAttribute("loanQuotePurpose");
+%>
+<section class="bank-panel loan-application-panel" aria-labelledby="loan-apply-title">
+    <h2 id="loan-apply-title"><%= quote == null ? "Plan a loan" : "Review your loan terms" %></h2>
+    <% if (activeAccounts.isEmpty()) { %>
+        <p class="bank-notice">An active bank account is required to apply.</p>
+    <% } else { %>
+        <% if (quote != null) { %>
+            <p class="subtle panel-message"><%= Html.escape(quotePurpose) %> loan. Funds go to account <%= Html.escape(quoteAccount.number()) %> if approved.</p>
+            <dl class="bank-summary loan-quote">
+                <div><dt>Amount borrowed</dt><dd><%= currency.format(quoteAmount) %></dd></div>
+                <div><dt>Loan duration</dt><dd><%= quote.months() %> months</dd></div>
+                <div><dt>Fixed annual interest rate</dt><dd><%= quote.annualRate().toPlainString() %>%</dd></div>
+                <div><dt>Total interest</dt><dd><%= currency.format(quote.interest(quoteAmount)) %></dd></div>
+                <div><dt>Fees</dt><dd><%= currency.format(BigDecimal.ZERO) %></dd></div>
+                <div><dt>Total to repay</dt><dd><%= currency.format(quote.total(quoteAmount)) %></dd></div>
+            </dl>
+            <p class="loan-schedule"><strong><%= quote.months() - 1 %> monthly payments of <%= currency.format(quote.monthly(quoteAmount)) %></strong>
+                and a final payment of <strong><%= currency.format(quote.finalPayment(quoteAmount)) %></strong>.
+                The first payment is due one month after payout.</p>
+            <p class="subtle loan-note">Simple interest is calculated on the original amount for the full term. Payments are manual and cover interest first. Early payoff includes any remaining fixed interest.</p>
+            <form method="post" action="<%= base %>/loans" class="bank-actions">
+                <input type="hidden" name="_csrf" value="${requestScope.csrfToken}">
+                <input type="hidden" name="requestKey" value="${requestScope.requestKey}">
+                <input type="hidden" name="source" value="<%= quoteAccount.id() %>">
+                <input type="hidden" name="option" value="<%= Html.escape(quotePurpose) %>">
+                <input type="hidden" name="amount" value="<%= quoteAmount.toPlainString() %>">
+                <input type="hidden" name="duration" value="<%= quote.months() %>">
+                <input type="hidden" name="reviewedRate" value="<%= quote.annualRate().toPlainString() %>">
+                <button class="bank-button" type="submit" name="action" value="apply">Submit for approval</button>
+            </form>
+            <details class="bank-disclosure"><summary>Edit loan details</summary>
+        <% } else { %>
+            <p class="subtle panel-message">Choose a purpose, amount and duration to see your full repayment terms before applying.</p>
+        <% } %>
+            <form method="post" action="<%= base %>/loans" class="bank-form">
+                <input type="hidden" name="_csrf" value="${requestScope.csrfToken}">
+                <input type="hidden" name="requestKey" value="${requestScope.requestKey}">
+                <div class="loan-application-fields">
+                    <label for="loan-account">Receiving account
+                        <select id="loan-account" name="source" required>
+                            <% for (BankAccount account : activeAccounts) { %>
+                                <option value="<%= account.id() %>" <%= quoteAccount != null && quoteAccount.id() == account.id() ? "selected" : "" %>><%= "SAVINGS".equals(account.type()) ? "Savings" : "Current" %> <%= Html.escape(account.number()) %></option>
+                            <% } %>
+                        </select>
+                    </label>
+                    <label for="loan-purpose">Loan purpose
+                        <select id="loan-purpose" name="option" required>
+                            <% for (LoanTerms.Plan plan : LoanTerms.PLANS) { %>
+                                <option value="<%= Html.escape(plan.purpose()) %>" <%= plan.purpose().equals(quotePurpose) ? "selected" : "" %>><%= Html.escape(plan.purpose()) %> (<%= plan.annualRate().toPlainString() %>% yearly)</option>
+                            <% } %>
+                        </select>
+                    </label>
+                    <label for="loan-amount">Requested amount (&#8377;)
+                        <input id="loan-amount" name="amount" inputmode="decimal" pattern="[0-9]{1,9}([.][0-9]{1,2})?" maxlength="12" value="<%= quoteAmount == null ? "" : quoteAmount.toPlainString() %>" required>
+                    </label>
+                    <label for="loan-duration">Repayment duration
+                        <select id="loan-duration" name="duration" required>
+                            <% for (int months : LoanTerms.DURATIONS) { %>
+                                <option value="<%= months %>" <%= (quote == null ? months == 12 : months == quote.months()) ? "selected" : "" %>><%= months %> months</option>
+                            <% } %>
+                        </select>
+                    </label>
+                </div>
+                <button class="bank-button" type="submit" name="action" value="quote">Review loan terms</button>
+            </form>
+        <% if (quote != null) { %></details><% } %>
+    <% } %>
+</section>
+<section class="bank-panel application-panel" aria-labelledby="loan-applications-title">
+    <h2 id="loan-applications-title">Loan applications</h2>
+    <% List<Application> applications = (List<Application>) request.getAttribute("applications"); %>
+    <% if (applications.isEmpty()) { %>
+        <p class="subtle panel-message">No applications yet.</p>
+    <% } else { %>
+        <div class="bank-table-wrap"><table class="bank-table">
+            <thead><tr><th scope="col">Application</th><th scope="col">Submitted</th><th scope="col">Receiving account</th><th scope="col" class="numeric">Amount</th><th scope="col">Terms</th><th scope="col">Status</th></tr></thead>
+            <tbody>
+                <% for (Application item : applications) { %>
+                    <tr><td>#<%= item.id() %> <%= Html.escape(item.purpose()) %></td><td><%= item.submittedAt().format(date) %></td>
+                        <td><%= Html.escape(item.account()) %></td><td class="numeric"><%= currency.format(item.amount()) %></td>
+                        <td><% if (item.terms() == null) { %>Principal only<% } else { %>
+                            <%= item.terms().months() %> months at <%= item.terms().annualRate().toPlainString() %>% yearly
+                            <small><%= currency.format(item.terms().total(item.amount())) %> total</small>
+                        <% } %></td>
+                        <td><span class="bank-status <%= "APPROVED".equals(item.status()) ? "" : "caution" %>"><%= "APPROVED".equals(item.status()) ? "Approved" : "PENDING".equals(item.status()) ? "Pending review" : "Declined" %></span>
+                            <% if (item.loanId() != null) { %><small>Loan LN-<%= item.loanId() %></small><% } %></td></tr>
+                <% } %>
+            </tbody>
+        </table></div>
+    <% } %>
+</section>

@@ -1,0 +1,27 @@
+    <% if (activity.isEmpty()) { %>
+        <p class="subtle panel-message">No transactions to show.</p>
+    <% } else { %>
+        <div class="bank-table-wrap">
+            <table class="bank-table">
+                <thead><tr><th scope="col">Transaction</th><th scope="col">Account</th><th scope="col">Date</th><th scope="col" class="numeric">Amount</th><% if (fullActivity) { %><th scope="col" class="numeric">Balance after</th><% } %></tr></thead>
+                <tbody>
+                <% for (Activity movement : activity) { %>
+                    <tr>
+                        <td><strong><%= movement.label() %></strong>
+                            <small>
+                                <% if (movement.reference().startsWith("T-")) { %>
+                                    <a href="<%= base %>/receipt?id=<%= movement.reference().substring(2) %>">Receipt <%= Html.escape(movement.reference()) %></a>
+                                <% } else { %><%= Html.escape(movement.reference()) %><% } %>
+                                <% if (movement.description() != null) { %> &middot; <%= Html.escape(movement.description()) %><% } %>
+                            </small>
+                        </td>
+                        <td><%= Html.escape(movement.account()) %></td>
+                        <td><%= movement.postedAt().format(timestamp) %></td>
+                        <td class="numeric"><%= (movement.debit() ? "-" : "+") + currency.format(movement.amount()) %></td>
+                        <% if (fullActivity) { %><td class="numeric"><%= currency.format(movement.balance()) %></td><% } %>
+                    </tr>
+                <% } %>
+                </tbody>
+            </table>
+        </div>
+    <% } %>

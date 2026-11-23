@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Admin sign-in | PROERP Netbanking</title>
     <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/app.css">
-    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/admin-console.css">
+    <link rel="stylesheet" href="${pageContext.request.contextPath}/assets/css/admin-console.css?v=onboarding">
 </head>
 <body class="auth-page console-login">
     <main class="console-login-layout">
@@ -24,7 +24,7 @@
         <% } %>
 
         <form method="post" action="${pageContext.request.contextPath}/admin/login">
-            <input type="hidden" name="_csrf" value="${sessionScope.csrfToken}">
+            <input type="hidden" name="_csrf" value="${requestScope.csrfToken}">
             <label for="username">Admin username</label>
             <input id="username" name="username" type="text" autocomplete="username" placeholder="Enter your username" required maxlength="50">
 
@@ -33,6 +33,12 @@
 
             <button class="button full-width" type="submit">Sign in</button>
         </form>
+        <% if (Boolean.TRUE.equals(request.getAttribute("adminDemoEnabled"))) { %>
+            <form method="post" action="${pageContext.request.contextPath}/admin/login" class="admin-demo-form">
+                <input type="hidden" name="_csrf" value="${requestScope.csrfToken}">
+                <button class="button button-outline full-width" type="submit" name="action" value="demo">Sign in as demo admin</button>
+            </form>
+        <% } %>
     </section>
     </main>
 </body>

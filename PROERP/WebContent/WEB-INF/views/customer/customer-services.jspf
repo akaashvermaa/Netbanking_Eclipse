@@ -1,0 +1,151 @@
+<% if ("payees".equals(section)) { %>
+    <div class="bank-service-grid">
+        <section class="bank-panel form-panel">
+            <h2>Add a payee</h2>
+            <form class="bank-form" method="post" action="<%= base %>/payees">
+                <input type="hidden" name="_csrf" value="${requestScope.csrfToken}">
+                <label>Payee name<input name="label" maxlength="60" required></label>
+                <label>PROERP account number<input name="destination" inputmode="numeric" pattern="[0-9]{1,18}" maxlength="18" required></label>
+                <button class="bank-button" type="submit" name="action" value="save">Save payee</button>
+            </form>
+        </section>
+        <section class="bank-panel">
+            <h2>Your payees</h2>
+            <% List<Payee> payees = (List<Payee>) request.getAttribute("payees"); %>
+            <% if (payees.isEmpty()) { %><p class="subtle panel-message">You have no saved payees.</p><% } %>
+            <ul class="bank-list">
+                <% for (Payee item : payees) { %>
+                    <li>
+                        <div><strong><%= Html.escape(item.name()) %></strong><p class="subtle"><%= Html.escape(item.number()) %></p></div>
+                        <div class="bank-actions">
+                            <a href="<%= base %>/transfer?to=<%= Html.escape(item.number()) %>">Send money</a>
+                            <form method="post" action="<%= base %>/payees">
+                                <input type="hidden" name="_csrf" value="${requestScope.csrfToken}">
+                                <input type="hidden" name="source" value="<%= item.accountId() %>">
+                                <button class="bank-button secondary" type="submit" name="action" value="remove">Remove</button>
+                            </form>
+                        </div>
+                    </li>
+                <% } %>
+            </ul>
+        </section>
+    </div>
+<% } else if ("bills".equals(section) || "deposits".equals(section)) {
+    boolean payingBill = "bills".equals(section);
+%>
+    <section class="bank-panel form-panel product-form">
+        <h2><%= payingBill ? "Make a bill payment" : "Open a fixed deposit" %></h2>
+        <p class="subtle"><%= payingBill ? "Simulated payments debit your selected account and appear in Activity."
+                : "This simulation pays 5% annual simple interest. Redeem the deposit into the same account at maturity." %></p>
+        <% if (activeAccounts.isEmpty()) { %>
+            <p class="bank-notice">You need an active account to continue.</p>
+        <% } else { %>
+            <form class="bank-form" method="post" action="<%= base + "/" + section %>">
+                <input type="hidden" name="_csrf" value="${requestScope.csrfToken}">
+                <input type="hidden" name="requestKey" value="${requestScope.requestKey}">
+                <label for="product-account">From account
+                    <select id="product-account" name="source" required><%@ include file="account-options.jspf" %></select>
+                </label>
+                <% if (payingBill) { %>
+                    <label for="product-option">Bill category
+                        <input id="product-option" name="option" list="bill-categories" maxlength="50" required
+                               placeholder="For example, Electricity or School fees" aria-describedby="bill-category-hint">
+                        <span id="bill-category-hint" class="input-hint">Choose a suggestion or enter your own category.</span>
+                    </label>
+                    <datalist id="bill-categories">
+                        <% for (String biller : CustomerPortalServlet.BILLERS) { %><option value="<%= biller %>"></option><% } %>
+                    </datalist>
+                    <label>Bill reference<input name="reference" maxlength="30" required></label>
+                <% } else { %>
+                    <label for="product-option">Term
+                        <select id="product-option" name="option" required>
+                            <option value="3">3 months</option><option value="6">6 months</option><option value="12">12 months</option>
+                        </select>
+                    </label>
+                <% } %>
+                <label>Amount (&#8377;)<input name="amount" inputmode="decimal" pattern="[0-9]{1,9}([.][0-9]{1,2})?" maxlength="12" required></label>
+                <button class="bank-button" type="submit" name="action" value="<%= payingBill ? "pay" : "open" %>">
+                    <%= payingBill ? "Pay bill" : "Open fixed deposit" %>
+                </button>
+            </form>
+        <% } %>
+    </section>
+    <% if (!payingBill) { %>
+        <section class="bank-panel">
+            <h2>Your fixed deposits</h2>
+            <% List<Deposit> deposits = (List<Deposit>) request.getAttribute("deposits"); %>
+            <% if (deposits.isEmpty()) { %><p class="subtle panel-message">You have no fixed deposits.</p><% } else { %>
+                <div class="bank-table-wrap"><table class="bank-table">
+                    <thead><tr><th scope="col">Deposit</th><th scope="col">Account</th><th scope="col">Principal</th><th scope="col">Maturity</th><th scope="col">Payout</th><th scope="col">Status</th></tr></thead>
+                    <tbody>
+                    <% for (Deposit item : deposits) { %>
+                        <tr><td>FD-<%= item.id() %></td><td><%= Html.escape(item.account()) %></td>
+                            <td><%= currency.format(item.principal()) %></td><td><%= item.maturity().format(date) %></td><td><%= currency.format(item.payout()) %></td>
+                            <td>
+                            <% if (item.redeemable()) { %>
+                                <form method="post" action="<%= base %>/deposits">
+                                    <input type="hidden" name="_csrf" value="${requestScope.csrfToken}">
+                                    <input type="hidden" name="requestKey" value="<%= UUID.randomUUID() %>">
+                                    <input type="hidden" name="source" value="<%= item.accountId() %>">
+                                    <input type="hidden" name="productId" value="<%= item.id() %>">
+                                    <button class="bank-button secondary" type="submit" name="action" value="redeem">Redeem</button>
+                                </form>
+                            <% } else { %><%= item.redeemed() ? "Redeemed" : "Open" %><% } %>
+                            </td></tr>
+                    <% } %>
+                    </tbody>
+                </table></div>
+            <% } %>
+        </section>
+    <% } else { %>
+        <a href="<%= base %>/activity">View account activity</a>
+    <% } %>
+<% } else if ("services".equals(section)) { %>
+    <div class="bank-service-grid">
+        <section class="bank-panel form-panel">
+            <h2>Submit a request</h2>
+            <form class="bank-form" method="post" action="<%= base %>/services">
+                <input type="hidden" name="_csrf" value="${requestScope.csrfToken}">
+                <input type="hidden" name="requestKey" value="${requestScope.requestKey}">
+                <label for="request-category">Request type
+                    <select id="request-category" name="category" required>
+                        <option value="CHEQUE_BOOK">Cheque book</option>
+                        <option value="CONTACT_UPDATE" <%= "CONTACT_UPDATE".equals(request.getParameter("category")) ? "selected" : "" %>>Update contact details</option>
+                        <option value="TRANSACTION_REVIEW">Review a transaction</option>
+                    </select>
+                </label>
+                <label for="request-details">Details
+                    <textarea id="request-details" name="details" maxlength="240" rows="3" required></textarea>
+                </label>
+                <button class="bank-button" type="submit">Submit request</button>
+            </form>
+        </section>
+        <section class="bank-panel">
+            <h2>Your requests</h2>
+            <% List<Ticket> tickets = (List<Ticket>) request.getAttribute("tickets"); %>
+            <% if (tickets.isEmpty()) { %><p class="subtle panel-message">You have no service requests.</p><% } %>
+            <ul class="bank-list">
+                <% for (Ticket item : tickets) { %>
+                    <li><div><strong><%= CustomerPortalServlet.serviceLabel(item.category()) %></strong>
+                        <p class="subtle">#<%= item.id() %> &middot; <%= item.submittedAt().format(date) %></p>
+                        <p><%= Html.escape(item.details()) %></p></div>
+                        <span class="bank-status <%= "OPEN".equals(item.status()) ? "caution" : "" %>"><%= "OPEN".equals(item.status()) ? "Open" : "Resolved" %></span>
+                    </li>
+                <% } %>
+            </ul>
+        </section>
+    </div>
+<% } else { Receipt receipt = (Receipt) request.getAttribute("receipt"); %>
+    <section class="bank-panel form-panel">
+        <h2><%= receipt.sent() ? "Transfer sent" : "Transfer received" %></h2>
+        <dl class="identity-facts">
+            <div><dt>Reference</dt><dd>T-<%= receipt.id() %></dd></div>
+            <div><dt>Amount</dt><dd><%= currency.format(receipt.amount()) %></dd></div>
+            <div><dt>From</dt><dd><%= Html.escape(receipt.source()) %></dd></div>
+            <div><dt>To</dt><dd><%= Html.escape(receipt.destination()) %></dd></div>
+            <div><dt>Posted</dt><dd><%= receipt.date().format(timestamp) %></dd></div>
+        </dl>
+        <p class="subtle">Simulated PROERP transfer</p>
+        <button class="bank-button secondary print-button" type="button" onclick="window.print()">Print receipt</button>
+    </section>
+<% } %>

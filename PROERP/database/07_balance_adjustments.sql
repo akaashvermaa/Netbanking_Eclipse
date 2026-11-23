@@ -1,0 +1,5 @@
+USE netbanking;
+
+ALTER TABLE account_movements
+    MODIFY COLUMN kind ENUM('DEPOSIT', 'LOAN_DISBURSEMENT', 'LOAN_REPAYMENT',
+                            'ADJUSTMENT_CREDIT', 'ADJUSTMENT_DEBIT') NOT NULL;

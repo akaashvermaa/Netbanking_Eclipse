@@ -60,6 +60,126 @@
 .record-timeline p { margin: 5px 0; font-size: 14px; line-height: 1.5; }
 .record-timeline small { color: var(--record-muted); }
 .record-edit summary:focus-visible { outline: 3px solid #91d1c4; outline-offset: 4px; }
+
+.customer-record .profile-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px 24px;
+    padding: 23px 25px;
+    background: #fff;
+    border: 1px solid var(--console-line);
+    border-radius: 12px 12px 0 0;
+}
+.profile-identity { display: flex; align-items: center; gap: 14px; min-width: 0; overflow-wrap: anywhere; }
+.profile-initial {
+    flex: 0 0 48px;
+    height: 48px;
+    display: grid;
+    place-items: center;
+    border: 1px solid #dfdacd;
+    border-radius: 12px;
+    background: #f1eee6;
+    color: #4e493e;
+    font-size: 22px;
+    font-weight: 700;
+}
+.profile-record-id, .profile-contact { margin: 0; color: var(--console-muted); font-size: 13px; }
+.admin-shell .profile-header h1 { margin: 3px 0 4px; font-size: clamp(27px, 3.4vw, 40px); }
+.profile-jumps { display: flex; flex-wrap: wrap; gap: 5px 9px; }
+.profile-jumps a { color: var(--console-link); padding: 5px 8px; border-radius: 5px; font-size: 13px; font-weight: 650; text-decoration: none; }
+.profile-jumps a:hover { background: #f2efe8; text-decoration: underline; }
+.profile-glance {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin: 0 0 16px;
+    background: #fff;
+    border: 1px solid var(--console-line);
+    border-top: 0;
+    border-radius: 0 0 12px 12px;
+}
+.profile-glance > div { padding: 14px 20px; min-width: 0; }
+.profile-glance > div + div { border-left: 1px solid var(--console-line); }
+.profile-glance dt { margin-bottom: 6px; color: var(--console-muted); font-size: 12px; }
+.profile-glance dd { margin: 0; font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.profile-glance dd small { display: block; margin-top: 3px; color: var(--console-muted); font-size: 12px; font-weight: 400; }
+.customer-record .profile-access {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    padding: 15px 20px;
+    margin-top: 16px;
+}
+.customer-record .profile-access-pending { background: #fcf8ee; border-color: #e9dbbd; }
+.customer-record .profile-access h2 { margin: 0 0 5px; font-size: 16px; }
+.profile-access p { color: var(--console-muted); margin: 0; max-width: 590px; font-size: 13px; line-height: 1.5; }
+.profile-access-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; margin: 0; }
+.profile-access-actions .button { min-height: 36px; font-size: 13px; padding-inline: 12px; }
+.profile-account-decision { display: grid; flex-basis: 100%; gap: 4px; font-size: 13px; font-weight: 650; }
+.profile-account-decision select { width: min(100%, 290px); }
+.profile-skip-link { color: var(--console-link); font-size: 13px; padding: 7px 5px; text-underline-offset: 3px; }
+.admin-shell .profile-access-actions .profile-suspend { color: #883e35; border-color: #dfc6c1; }
+.profile-sections {
+    grid-template-columns: minmax(225px, 1fr) minmax(0, 1.7fr);
+    grid-template-areas: "details accounts" "details loans" "history history";
+    margin-top: 16px;
+    gap: 14px;
+}
+.profile-details { grid-area: details; }
+#customer-accounts { grid-area: accounts; }
+#customer-loans { grid-area: loans; }
+#customer-history { grid-area: history; }
+.profile-details .record-facts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.profile-details .record-facts dd { overflow-wrap: anywhere; }
+.profile-details .record-edit { padding: 10px 0; }
+.profile-sections .record-empty { padding: 10px 12px; background: #f5f4ef; color: var(--console-muted); }
+#customer-accounts .profile-bank-account {
+    display: block;
+    margin-bottom: 10px;
+    padding: 0;
+    border: 1px solid var(--console-line);
+    border-radius: 9px;
+}
+.profile-bank-account:target { outline: 2px solid #82785f; outline-offset: 2px; }
+.profile-bank-summary {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    padding: 16px;
+    background: #f7f6f2;
+    border-radius: 9px 9px 0 0;
+}
+.profile-bank-title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.profile-bank-title h3 { margin: 0; font-size: 15px; }
+.profile-bank-balance { min-width: 0; }
+.profile-bank-balance strong { font-size: 22px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.profile-bank-controls { padding: 12px 16px; border-top: 1px solid var(--console-line); }
+.profile-bank-controls .notice { margin: 0 0 10px; }
+.profile-bank-actions { margin-top: 10px; justify-content: space-between; }
+.profile-bank-actions form { margin: 0; }
+.profile-balance-edit summary { cursor: pointer; width: fit-content; color: var(--console-link); font-size: 14px; font-weight: 700; }
+.profile-balance-edit form { display: flex; align-items: end; flex-wrap: wrap; gap: 8px; margin: 10px 0 0; }
+.profile-balance-edit label { display: block; margin-bottom: 4px; }
+.profile-balance-edit input { width: min(100%, 220px); }
+.profile-history-table th { background: #f5f4ef; color: var(--console-muted); }
+.profile-history-table td { vertical-align: top; }
+.profile-history-table td:first-child { white-space: normal; min-width: 180px; overflow-wrap: anywhere; }
+.profile-history-table small { display: block; margin-top: 4px; color: var(--console-muted); }
+.customer-record :is(#profile-details, #customer-accounts, #customer-loans, #customer-history):target { outline: 2px solid #82785f; outline-offset: -2px; }
+
+@media (max-width: 1020px) {
+    .profile-sections { grid-template-columns: 1fr; grid-template-areas: "details" "accounts" "loans" "history"; }
+}
+@media (max-width: 700px) {
+    .profile-glance { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .profile-glance > div:nth-child(3) { border-left: 0; }
+    .profile-glance > div:nth-child(n + 3) { border-top: 1px solid var(--console-line); }
+    .customer-record .profile-header, .customer-record .profile-access, .profile-glance > div { padding: 13px; }
+}
 @media (max-width: 980px) {
     .record-grid { grid-template-columns: 1fr; }
     .record-decision { grid-row: 1; }

@@ -1,0 +1,34 @@
+.customer-profile .bank-main { width: 100%; margin: 0; padding: clamp(18px, 2.5vw, 34px); }
+.customer-profile .bank-heading { margin-bottom: 15px; }
+.customer-profile h1 { font-size: clamp(25px, 3.2vw, 38px); }
+.profile-header-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    padding: clamp(16px, 2.4vw, 25px);
+    margin-bottom: 17px;
+    border: 1px solid var(--bank-border);
+    border-radius: 9px;
+    background: #efeee6;
+    overflow-wrap: anywhere;
+}
+.profile-header-card h2 { font-size: clamp(21px, 2.6vw, 31px); }
+.profile-header-card p { margin-top: 4px; color: var(--bank-muted); font-size: 13px; }
+.profile-layout { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(260px, 1fr); align-items: start; gap: 16px; }
+.profile-primary { min-width: 0; display: grid; gap: 13px; }
+.profile-secondary { min-width: 0; }
+.profile-panel h2 { font-size: 17px; }
+.profile-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 18px; margin-top: 10px; }
+.profile-fields > div { border-top: 1px solid var(--bank-border); padding: 9px 0; }
+.profile-fields .profile-wide { grid-column: 1 / -1; }
+.profile-fields dt { color: var(--bank-muted); font-size: 13px; }
+.profile-fields dd { font-size: 15px; font-weight: 600; margin-top: 3px; overflow-wrap: anywhere; }
+.profile-password { margin-top: 12px; }
+.profile-phone-form { max-width: 340px; }
+@media (max-width: 960px) { .profile-layout { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 460px) {
+    .customer-profile .bank-main { padding: 13px; }
+    .profile-fields { grid-template-columns: minmax(0, 1fr); }
+}

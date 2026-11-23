@@ -1,2 +1,4 @@
 /src/db.properties
+/src/demo.properties
 /build/
+/WebContent/WEB-INF/classes/

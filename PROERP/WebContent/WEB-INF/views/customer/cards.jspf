@@ -1,0 +1,157 @@
+<%
+    String cardsUrl = base + "/cards";
+    List<Card> wallet = (List<Card>) request.getAttribute("cards");
+    Card currentCard = (Card) request.getAttribute("selectedCard");
+    List<BankAccount> eligibleAccounts = activeAccounts.stream()
+            .filter(account -> wallet.stream().noneMatch(card -> card.accountId() == account.id())).toList();
+    Map<String, String> cardMessages = Map.ofEntries(
+            Map.entry("card_issued", "Virtual debit card issued."),
+            Map.entry("card_lock", "Card locked."),
+            Map.entry("card_unlock", "Card unlocked."),
+            Map.entry("card_limit_saved", "Daily purchase limit updated."),
+            Map.entry("card_posted", "Simulated purchase recorded."),
+            Map.entry("card_duplicate", "This purchase was already recorded."),
+            Map.entry("card_blocked", "Unlock the card before making a purchase."),
+            Map.entry("card_daily_limit", "This purchase exceeds the remaining daily limit."),
+            Map.entry("card_insufficient", "The linked account has insufficient funds."),
+            Map.entry("card_unavailable", "This action is unavailable for the linked account."),
+            Map.entry("card_invalid", "Check the details and try again."));
+    String cardFeedback = result == null ? null : cardMessages.get(result);
+    boolean cardSaved = List.of("card_issued", "card_lock", "card_unlock", "card_limit_saved",
+            "card_posted", "card_duplicate").contains(result == null ? "" : result);
+%>
+<div class="cards-workspace" id="card-details">
+    <% if (cardFeedback != null) { %>
+        <p class="bank-notice <%= cardSaved ? "success" : "error" %>" role="<%= cardSaved ? "status" : "alert" %>"><%= cardFeedback %></p>
+    <% } %>
+    <% if (wallet.size() > 1) { %>
+        <nav class="card-picker" aria-label="Choose a debit card">
+            <% for (Card card : wallet) { %>
+                <a href="<%= cardsUrl %>?card=<%= card.accountId() %>" <%= card.accountId() == currentCard.accountId() ? "aria-current=\"true\"" : "" %>>
+                    Debit ending <%= Html.escape(card.lastFour()) %>
+                </a>
+            <% } %>
+        </nav>
+    <% } %>
+    <% if (currentCard != null) {
+        String cardUrl = cardsUrl + "?card=" + currentCard.accountId();
+        String cardState = !currentCard.accountActive() ? "Account frozen" : currentCard.locked() ? "Locked" : "Active";
+        BigDecimal spentToday = (BigDecimal) request.getAttribute("cardSpentToday");
+        BigDecimal dailyLimit = currentCard.limit();
+        BigDecimal availableToday = dailyLimit.subtract(spentToday).max(BigDecimal.ZERO);
+        List<Activity> purchases = (List<Activity>) request.getAttribute("cardActivity");
+        long purchasePage = (Long) request.getAttribute("cardPage");
+        boolean nextPurchasePage = Boolean.TRUE.equals(request.getAttribute("cardMore"));
+    %>
+        <div class="cards-primary">
+            <section class="bank-panel card-wallet" aria-labelledby="wallet-title">
+                <div class="section-heading">
+                    <h2 id="wallet-title">Virtual debit card</h2>
+                    <span class="bank-status <%= "Active".equals(cardState) ? "" : "caution" %>"><%= cardState %></span>
+                </div>
+                <div class="card-face">
+                    <div class="card-face-brand"><strong>PROERP</strong><span>Debit</span></div>
+                    <span class="card-chip" aria-hidden="true"></span>
+                    <div class="card-face-digits" aria-label="Card ending <%= Html.escape(currentCard.lastFour()) %>">
+                        <span aria-hidden="true">XXXX XXXX XXXX</span> <%= Html.escape(currentCard.lastFour()) %>
+                    </div>
+                    <span class="card-holder"><%= Html.escape(customer.name()) %></span>
+                </div>
+                <div class="card-linked"><span>Linked account</span><strong><%= Html.escape(currentCard.account()) %></strong></div>
+            </section>
+            <section class="bank-panel card-settings" aria-labelledby="card-settings-title">
+                <h2 id="card-settings-title">Card controls</h2>
+                <div class="card-limit">
+                    <span>Remaining daily purchase limit</span>
+                    <strong><%= currency.format(availableToday) %></strong>
+                    <% if (dailyLimit.signum() > 0) { %>
+                        <progress value="<%= spentToday.min(dailyLimit).toPlainString() %>" max="<%= dailyLimit.toPlainString() %>" aria-label="Daily purchase limit used"></progress>
+                    <% } %>
+                    <div class="card-limit-totals"><span><%= currency.format(spentToday) %> spent today</span><span><%= currency.format(dailyLimit) %> daily limit</span></div>
+                </div>
+                <% if (currentCard.accountActive()) { %>
+                    <div class="card-setting-row">
+                        <div>
+                            <h3>Card lock</h3>
+                            <p class="subtle"><%= currentCard.locked() ? "Purchases are paused." : "Pause purchases immediately." %></p>
+                        </div>
+                        <form method="post" action="<%= cardsUrl %>">
+                            <input type="hidden" name="_csrf" value="${requestScope.csrfToken}">
+                            <input type="hidden" name="source" value="<%= currentCard.accountId() %>">
+                            <button class="bank-button secondary" type="submit" name="action" value="<%= currentCard.locked() ? "unlock" : "lock" %>"><%= currentCard.locked() ? "Unlock card" : "Lock card" %></button>
+                        </form>
+                    </div>
+                    <details class="card-setting-row" <%= "card_invalid".equals(result) ? "open" : "" %>>
+                        <summary>Change daily limit</summary>
+                        <form class="bank-form card-inline-form" method="post" action="<%= cardsUrl %>">
+                            <input type="hidden" name="_csrf" value="${requestScope.csrfToken}">
+                            <input type="hidden" name="source" value="<%= currentCard.accountId() %>">
+                            <label>New daily limit (&#8377;)<input name="limit" inputmode="decimal" pattern="[0-9]{1,6}([.][0-9]{1,2})?" value="<%= dailyLimit.toPlainString() %>" required></label>
+                            <button class="bank-button" type="submit" name="action" value="limit">Save limit</button>
+                        </form>
+                    </details>
+                <% } else { %>
+                    <p class="card-setting-row subtle">Card settings are unavailable while the linked account is frozen.</p>
+                <% } %>
+            </section>
+        </div>
+        <section class="bank-panel card-history" aria-labelledby="card-history-title">
+            <div class="section-heading">
+                <h2 id="card-history-title">Card purchases</h2>
+                <span class="subtle">Debit ending <%= Html.escape(currentCard.lastFour()) %></span>
+            </div>
+            <% if (!purchases.isEmpty()) { %>
+                <div class="bank-table-wrap">
+                    <table class="bank-table">
+                        <thead><tr><th scope="col">Merchant</th><th scope="col">Date</th><th scope="col" class="numeric">Amount</th></tr></thead>
+                        <tbody>
+                            <% for (Activity purchase : purchases) { %>
+                                <tr><td><strong><%= Html.escape(purchase.description()) %></strong></td><td><%= purchase.postedAt().format(timestamp) %></td><td class="numeric">-<%= currency.format(purchase.amount()) %></td></tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } else { %>
+                <p class="card-empty subtle"><%= purchasePage == 1 ? "No card purchases yet." : "No purchases on this page." %></p>
+            <% } %>
+            <% if (purchasePage > 1 || nextPurchasePage) { %>
+                <nav class="bank-actions" aria-label="Card purchase pages">
+                    <% if (purchasePage > 1) { %><a href="<%= cardUrl %>&amp;cardPage=<%= purchasePage - 1 %>#card-history-title">Previous</a><% } %>
+                    <span>Page <%= purchasePage %></span>
+                    <% if (nextPurchasePage) { %><a href="<%= cardUrl %>&amp;cardPage=<%= purchasePage + 1 %>#card-history-title">Next</a><% } %>
+                </nav>
+            <% } %>
+            <% if (currentCard.accountActive() && !currentCard.locked()) { %>
+                <details class="card-setting-row">
+                    <summary>Simulate a purchase</summary>
+                    <form method="post" action="<%= cardsUrl %>" class="bank-form card-inline-form">
+                        <input type="hidden" name="_csrf" value="${requestScope.csrfToken}">
+                        <input type="hidden" name="source" value="<%= currentCard.accountId() %>">
+                        <input type="hidden" name="requestKey" value="<%= UUID.randomUUID() %>">
+                        <label>Merchant<input name="merchant" maxlength="60" required></label>
+                        <label>Amount (&#8377;)<input name="amount" maxlength="12" inputmode="decimal" pattern="[0-9]{1,9}([.][0-9]{1,2})?" required></label>
+                        <button class="bank-button" type="submit" name="action" value="purchase">Record purchase</button>
+                    </form>
+                </details>
+            <% } %>
+        </section>
+    <% } %>
+    <% if (!eligibleAccounts.isEmpty()) { %>
+        <details class="bank-panel card-issue" <%= currentCard == null ? "open" : "" %>>
+            <summary>Request a virtual debit card</summary>
+            <form class="bank-form card-inline-form" method="post" action="<%= cardsUrl %>">
+                <input type="hidden" name="_csrf" value="${requestScope.csrfToken}">
+                <label>Linked account
+                    <select name="source" required>
+                        <% for (BankAccount account : eligibleAccounts) { %>
+                            <option value="<%= account.id() %>"><%= Html.escape(account.number()) %></option>
+                        <% } %>
+                    </select>
+                </label>
+                <button class="bank-button" type="submit" name="action" value="issue">Issue simulated card</button>
+            </form>
+        </details>
+    <% } else if (currentCard == null) { %>
+        <p class="bank-panel">You need an active account before you can request a debit card.</p>
+    <% } %>
+</div>
