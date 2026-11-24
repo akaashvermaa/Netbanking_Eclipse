@@ -29,6 +29,8 @@ Use Java 17 for the application and `jakarta.servlet.*` for web APIs. Tomcat 10.
 
 ## Eclipse and Tomcat setup
 
+For a presentation machine, use the standalone launcher for [macOS](PROERP/README.md#standalone-demo-on-macos) or [Windows](PROERP/README.md#standalone-demo-on-windows). The launchers store generated runtimes, database data and credentials in the ignored `PROERP/.standalone` folder and use ports 8081 and 3307.
+
 | Setting | Required value |
 |---|---|
 | Eclipse distribution | Eclipse IDE for Enterprise Java and Web Developers with WTP server tools |

@@ -4,6 +4,8 @@ An Eclipse Dynamic Web Project using Java 17, JSP, Jakarta Servlets, Apache Tomc
 
 For agent handoff, see [the project rules](../AGENTS.md) and [the setup and troubleshooting guide](../AGENT_GUIDE.md).
 
+For a presentation machine, use the standalone launcher for [macOS](#standalone-demo-on-macos) or [Windows](#standalone-demo-on-windows).
+
 ## Current Admin Features
 
 - Bank account directory with search by customer username or account number and filters for active and frozen accounts.
@@ -97,3 +99,40 @@ If an admin route returns 404, check the deployed context path and confirm Eclip
 - Customer access to their bank accounts.
 - Internal transfers backed by the double-entry ledger, with concurrency-safe posting.
 - Statements, simulated cards, service requests, and the concurrency demonstration.
+## Standalone demo on macOS
+
+Open Terminal in the PROERP folder and run:
+
+```bash
+bash Run-PROERP.command
+```
+
+To make it double-clickable in Finder, run `chmod +x Run-PROERP.command` once.
+
+The launcher supports Apple Silicon and Intel on macOS 15 or later. It selects and verifies the correct Java and MySQL archives. It uses Microsoft OpenJDK 17.0.21.1, Tomcat 10.1.62, Connector/J 26.10.0, and MySQL 8.4 LTS. MySQL is pinned to 8.4.13 on Apple Silicon and 8.4.11 on Intel, which uses Oracle's archived Intel build. [Microsoft OpenJDK downloads](https://learn.microsoft.com/en-us/java/openjdk/download#openjdk-17) · [MySQL archives](https://downloads.mysql.com/archives/community/)
+
+The first run needs internet access and about 3 GB of free space. You can run the launcher with a standard macOS user account. It sets up its own local runtime paths, builds the app, applies the SQL migrations, and adds fictional demo users and accounts. Open [PROERP](http://127.0.0.1:8081/PROERP/) and use the demo sign-in buttons. Press Enter in Terminal to stop both servers. Later launches reuse the downloads and database.
+
+- Use `bash Run-PROERP.command --check` to test both demo sign-ins and stop the servers.
+- Use `bash Run-PROERP.command --http-port 8082 --db-port 3308` if the default ports are busy.
+- Startup logs are in `.standalone/macos-arm64/logs` or `.standalone/macos-x86_64/logs`. After an abrupt shutdown, the launcher can leave a lock under the corresponding runtime folder. Its `pid` file identifies the launcher process. Remove the lock only after checking that the launcher and its servers have stopped.
+- When sharing the project, leave out `.standalone`, `build`, `src/db.properties`, and `src/demo.properties`.
+
+## Standalone demo on Windows
+
+Open `Run-PROERP.bat` from the PROERP folder on Windows x64. The first run needs internet access and about 500 MB of downloads. Allow about 3 GB of free disk space for the downloaded and extracted runtimes, database, and application.
+
+The launcher verifies and caches these pinned downloads, builds the Java 17 source, applies the SQL migrations to its own MySQL database, and starts Tomcat at [http://127.0.0.1:8081/PROERP/](http://127.0.0.1:8081/PROERP/).
+
+| Dependency | Pinned version |
+|---|---|
+| [Microsoft Build of OpenJDK](https://learn.microsoft.com/en-us/java/openjdk/download#openjdk-17) | 17.0.21.1 |
+| [Apache Tomcat](https://tomcat.apache.org/download-10.cgi) | 10.1.62 |
+| [MySQL Community Server](https://dev.mysql.com/downloads/mysql/8.4.html) | 8.4.13 LTS |
+| [MySQL Connector/J](https://dev.mysql.com/downloads/connector/j/?os=26) | 26.10.0 |
+
+Use **Sign in as demo admin** or **Sign in as demo customer**. The launcher seeds fictional accounts and transactions on the first run. Press Enter in the launcher window to stop Tomcat and MySQL. Run the same batch file later to rebuild and reuse your data.
+
+The standalone files, data, logs and locally generated credentials live in the ignored `.standalone` directory. Share the source project and leave out `.standalone`, `build`, `src/db.properties`, and `src/demo.properties`. The launcher starts local processes on loopback ports 8081 and 3307. If either port is occupied, run `Run-PROERP.bat -HttpPort 8082 -DbPort 3308`. Windows needs the Microsoft Visual C++ x64 Redistributable if it is missing. [Microsoft's Visual C++ runtime download](https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist)
+
+Run `Run-PROERP.bat -Check` to test both demo sign-ins and then stop the local processes. Check `.standalone/logs` for startup errors.

@@ -1,4 +1,5 @@
 /src/db.properties
 /src/demo.properties
 /build/
+/.standalone/
 /WebContent/WEB-INF/classes/
