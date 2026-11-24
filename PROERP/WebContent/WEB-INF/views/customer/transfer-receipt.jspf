@@ -1,0 +1,76 @@
+<%
+    Receipt receipt = (Receipt) request.getAttribute("receipt");
+    TransferParty[] parties = {receipt.source(), receipt.destination()};
+    String[] partyLabels = {"Sender", "Recipient"};
+    String direction = receipt.sent() && receipt.received() ? "Between your accounts"
+            : receipt.sent() ? "Transfer sent" : "Transfer received";
+    DateTimeFormatter receiptTime = DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm:ss a", Locale.ENGLISH)
+            .withZone(ZoneId.of("Asia/Kolkata"));
+%>
+<article class="bank-panel transfer-receipt" aria-labelledby="receipt-title">
+    <header class="receipt-header">
+        <div>
+            <p class="receipt-brand">PROERP Banking</p>
+            <h2 id="receipt-title"><%= direction %></h2>
+        </div>
+        <span class="bank-status">Completed</span>
+    </header>
+    <div class="receipt-summary">
+        <div>
+            <span class="subtle">Amount transferred</span>
+            <strong class="receipt-amount"><%= currency.format(receipt.amount()) %></strong>
+        </div>
+        <dl class="receipt-reference">
+            <div><dt>Transaction reference</dt><dd>T-<%= receipt.id() %></dd></div>
+            <div><dt>Posted on</dt><dd><time datetime="<%= receipt.postedAt() %>"><%= receiptTime.format(receipt.postedAt()) %> IST</time></dd></div>
+        </dl>
+    </div>
+
+    <div class="receipt-parties">
+        <% for (int index = 0; index < parties.length; index++) {
+            TransferParty party = parties[index];
+        %>
+            <section>
+                <h3><%= partyLabels[index] %></h3>
+                <p class="receipt-party-name"><%= Html.escape(party.name()) %></p>
+                <dl class="receipt-facts">
+                    <div><dt>Bank</dt><dd>PROERP Banking</dd></div>
+                    <div><dt>Account type</dt><dd><%= "SAVINGS".equals(party.type()) ? "Savings" : "Current" %></dd></div>
+                    <div><dt>Account number</dt><dd><%= Html.escape(party.account()) %></dd></div>
+                </dl>
+            </section>
+        <% } %>
+    </div>
+
+    <section class="receipt-details" aria-labelledby="receipt-details-title">
+        <h3 id="receipt-details-title">Transaction details</h3>
+        <dl class="receipt-facts">
+            <div><dt>Transfer method</dt><dd>Internal PROERP transfer</dd></div>
+            <div><dt>Transfer fee</dt><dd><%= currency.format(BigDecimal.ZERO) %></dd></div>
+            <div><dt>Transfer note</dt><dd><%= receipt.note() == null ? "No note recorded" : Html.escape(receipt.note()) %></dd></div>
+        </dl>
+    </section>
+    <section class="receipt-details" aria-labelledby="receipt-balance-title">
+        <h3 id="receipt-balance-title">Your account balances at posting</h3>
+        <div class="receipt-balances">
+            <% for (int index = 0; index < parties.length; index++) {
+                TransferParty party = parties[index];
+                BigDecimal after = party.ownedBalanceAfter();
+                if (after == null) continue;
+                boolean debit = index == 0;
+                BigDecimal before = debit ? after.add(receipt.amount()) : after.subtract(receipt.amount());
+            %>
+                <dl class="receipt-facts">
+                    <div><dt><%= debit ? "Debited account" : "Credited account" %></dt><dd><%= Html.escape(party.account()) %></dd></div>
+                    <div><dt>Balance before</dt><dd><%= currency.format(before) %></dd></div>
+                    <div><dt>Balance after</dt><dd><strong><%= currency.format(after) %></strong></dd></div>
+                </dl>
+            <% } %>
+        </div>
+    </section>
+    <footer class="receipt-footer">Simulated transaction for the PROERP banking demonstration.</footer>
+</article>
+<div class="bank-actions receipt-actions">
+    <a href="<%= base %>/activity">Back to activity</a>
+    <button class="bank-button" type="button" onclick="window.print()">Print receipt</button>
+</div>

@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -38,8 +39,12 @@ public class CustomerBankingDao {
             };
         }
     }
-    public record Receipt(long id, String source, String destination, BigDecimal amount, LocalDateTime date,
-                          boolean sent) {}
+    public record TransferParty(String name, String account, String type, BigDecimal ownedBalanceAfter) {}
+    public record Receipt(long id, TransferParty source, TransferParty destination, BigDecimal amount,
+                          Instant postedAt, String note) {
+        public boolean sent() { return source.ownedBalanceAfter() != null; }
+        public boolean received() { return destination.ownedBalanceAfter() != null; }
+    }
     public record DailyFlow(LocalDate date, BigDecimal credits, BigDecimal debits) {}
     public enum Category {
         ALL("All types"),
@@ -168,9 +173,16 @@ public class CustomerBankingDao {
     public Receipt receipt(long customerId, long transferId) throws SQLException {
         try (var db = DatabaseConnection.getConnection();
              var query = db.prepareStatement("""
-                     SELECT s.account_number, d.account_number, t.amount, t.posted_at, s.customer_id
+                     SELECT s.account_number, s.account_type, s.customer_id, t.source_balance_after,
+                            COALESCE(t.sender_name, NULLIF(TRIM(sp.full_name), ''), su.username) AS sender_name,
+                            d.account_number, d.account_type, d.customer_id, t.destination_balance_after,
+                            COALESCE(t.recipient_name, NULLIF(TRIM(dp.full_name), ''), du.username) AS recipient_name,
+                            t.amount, UNIX_TIMESTAMP(t.posted_at) AS posted_epoch, t.transfer_note
                      FROM customer_transfers t JOIN bank_accounts s ON s.id=t.source_account_id
                      JOIN bank_accounts d ON d.id=t.destination_account_id
+                     JOIN users su ON su.id=s.customer_id JOIN users du ON du.id=d.customer_id
+                     LEFT JOIN customer_profiles sp ON sp.customer_id=su.id
+                     LEFT JOIN customer_profiles dp ON dp.customer_id=du.id
                      WHERE t.id=? AND (s.customer_id=? OR d.customer_id=?)
                      """)) {
             query.setLong(1, transferId);
@@ -178,20 +190,31 @@ public class CustomerBankingDao {
             query.setLong(3, customerId);
             try (var row = query.executeQuery()) {
                 if (!row.next()) return null;
-                boolean sent = row.getLong(5) == customerId;
-                String source = row.getString(1);
-                if (!sent) source = "Ending " + source.substring(Math.max(0, source.length() - 4));
-                return new Receipt(transferId, source, row.getString(2), row.getBigDecimal(3),
-                        row.getObject(4, LocalDateTime.class), sent);
+                boolean sent = row.getLong(3) == customerId;
+                boolean received = row.getLong(8) == customerId;
+                String sourceNumber = row.getString(1);
+                if (!sent) sourceNumber = "Ending " + sourceNumber.substring(Math.max(0, sourceNumber.length() - 4));
+                var source = new TransferParty(row.getString(5), sourceNumber, row.getString(2),
+                        sent ? row.getBigDecimal(4) : null);
+                var destination = new TransferParty(row.getString(10), row.getString(6), row.getString(7),
+                        received ? row.getBigDecimal(9) : null);
+                return new Receipt(transferId, source, destination, row.getBigDecimal(11),
+                        Instant.ofEpochSecond(row.getLong(12)), row.getString(13));
             }
         }
     }
 
     public TransferResult transfer(Identity customer, long sourceId, String destinationNumber, BigDecimal amount,
                                    String requestKey) throws SQLException {
+        return transfer(customer, sourceId, destinationNumber, amount, requestKey, "");
+    }
+
+    public TransferResult transfer(Identity customer, long sourceId, String destinationNumber, BigDecimal amount,
+                                   String requestKey, String note) throws SQLException {
         if (amount.signum() <= 0 || amount.scale() > 2 || amount.precision() - amount.scale() > 9) {
             return TransferResult.INVALID;
         }
+        if (note.length() > 100 || note.codePoints().anyMatch(Character::isISOControl)) return TransferResult.INVALID;
         try (var db = DatabaseConnection.getConnection()) {
             db.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
             db.setAutoCommit(false);
@@ -215,14 +238,14 @@ public class CustomerBankingDao {
                     return rollback(db, TransferResult.UNAVAILABLE);
                 }
                 try (var previous = db.prepareStatement("""
-                        SELECT source_account_id, destination_account_id, amount FROM customer_transfers
+                        SELECT source_account_id, destination_account_id, amount, COALESCE(transfer_note, '') FROM customer_transfers
                         WHERE request_key=?
                         """)) {
                     previous.setString(1, requestKey);
                     try (var row = previous.executeQuery()) {
                         if (row.next()) {
                             boolean same = row.getLong(1) == sourceId && row.getLong(2) == destinationId
-                                    && row.getBigDecimal(3).compareTo(amount) == 0;
+                                    && row.getBigDecimal(3).compareTo(amount) == 0 && note.equals(row.getString(4));
                             return rollback(db, same ? TransferResult.DUPLICATE : TransferResult.INVALID);
                         }
                     }
@@ -234,16 +257,27 @@ public class CustomerBankingDao {
 
                 try (var movement = db.prepareStatement("""
                         INSERT INTO customer_transfers(source_account_id, destination_account_id, amount,
-                            source_balance_after, destination_balance_after, request_key) VALUES (?,?,?,?,?,?)
+                            source_balance_after, destination_balance_after, request_key, transfer_note, sender_name, recipient_name)
+                        SELECT s.id, d.id, ?, ?, ?, ?, NULLIF(?, ''),
+                               COALESCE(NULLIF(TRIM(sp.full_name), ''), su.username),
+                               COALESCE(NULLIF(TRIM(dp.full_name), ''), du.username)
+                        FROM bank_accounts s
+                        JOIN users su ON su.id=s.customer_id
+                        JOIN bank_accounts d ON d.id=?
+                        JOIN users du ON du.id=d.customer_id
+                        LEFT JOIN customer_profiles sp ON sp.customer_id=su.id
+                        LEFT JOIN customer_profiles dp ON dp.customer_id=du.id
+                        WHERE s.id=?
                         """);
                      var update = db.prepareStatement("UPDATE bank_accounts SET balance=? WHERE id=?")) {
-                    movement.setLong(1, sourceId);
-                    movement.setLong(2, destinationId);
-                    movement.setBigDecimal(3, amount);
-                    movement.setBigDecimal(4, remaining);
-                    movement.setBigDecimal(5, received);
-                    movement.setString(6, requestKey);
-                    movement.executeUpdate();
+                    movement.setBigDecimal(1, amount);
+                    movement.setBigDecimal(2, remaining);
+                    movement.setBigDecimal(3, received);
+                    movement.setString(4, requestKey);
+                    movement.setString(5, note);
+                    movement.setLong(6, destinationId);
+                    movement.setLong(7, sourceId);
+                    if (movement.executeUpdate() != 1) return rollback(db, TransferResult.UNAVAILABLE);
                     update.setBigDecimal(1, remaining);
                     update.setLong(2, sourceId);
                     update.executeUpdate();

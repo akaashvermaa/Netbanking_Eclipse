@@ -1,7 +1,7 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ page import="java.math.BigDecimal,java.text.NumberFormat,java.time.format.DateTimeFormatter,java.util.List,java.util.Locale,java.util.Map" %>
 <%@ page import="com.netbanking.dao.CustomerAccessDao.Identity,com.netbanking.dao.CustomerBankingDao.Activity,com.netbanking.dao.FinanceDao.Loan,com.netbanking.model.BankAccount,com.netbanking.model.KycStatus,com.netbanking.util.Html" %>
-<%@ page import="com.netbanking.dao.CustomerBankingDao.Receipt,com.netbanking.dao.CustomerProductsDao.Card,com.netbanking.dao.CustomerProductsDao.Deposit,com.netbanking.dao.CustomerProductsDao.Payee,com.netbanking.dao.CustomerRequestsDao.Application,com.netbanking.dao.CustomerRequestsDao.Ticket,com.netbanking.web.CustomerPortalServlet,java.util.UUID" %>
+<%@ page import="com.netbanking.dao.CustomerBankingDao.Receipt,com.netbanking.dao.CustomerBankingDao.TransferParty,com.netbanking.dao.CustomerProductsDao.Card,com.netbanking.dao.CustomerProductsDao.Deposit,com.netbanking.dao.CustomerProductsDao.Payee,com.netbanking.dao.CustomerRequestsDao.Application,com.netbanking.dao.CustomerRequestsDao.Ticket,com.netbanking.web.CustomerPortalServlet,java.util.UUID,java.time.ZoneId" %>
 <%@ page import="com.netbanking.dao.CustomerBankingDao.Category,com.netbanking.dao.CustomerProductsDao.Goal" %>
 <%@ page import="com.netbanking.dao.CustomerBankingDao.DailyFlow,java.math.RoundingMode" %>
 <%@ page import="com.netbanking.model.LoanTerms" %>
@@ -27,6 +27,7 @@
     } else if ("transfer".equals(section)) {
         if ("recipient_choice".equals(result)) feedback = "Choose one of your saved payees or enter an account number.";
         if ("invalid".equals(result)) feedback = "Check the account number and enter a positive amount with up to two decimal places. Choose a different destination account.";
+        if ("invalid_note".equals(result)) feedback = "Enter a transfer note of up to 100 characters on one line.";
         if ("unavailable".equals(result)) feedback = "The transfer could not be completed. Check the account details or try again.";
         if ("insufficient".equals(result)) feedback = "The source account has insufficient funds.";
     } else if ("password".equals(section)) {
@@ -80,10 +81,12 @@
     <% if ("overview".equals(section)) { %><link rel="stylesheet" href="<%= request.getContextPath() %>/assets/css/customer-overview.css?v=views"><% } %>
     <% if ("profile".equals(section)) { %><link rel="stylesheet" href="<%= request.getContextPath() %>/assets/css/customer-profile.css"><% } %>
     <% if ("cards".equals(section)) { %><link rel="stylesheet" href="<%= request.getContextPath() %>/assets/css/customer-cards.css"><% } %>
+    <% if ("receipt".equals(section)) { %><link rel="stylesheet" href="<%= request.getContextPath() %>/assets/css/customer-receipt.css"><% } %>
 </head>
 <body<%= "overview".equals(section) ? " class=\"customer-overview\"" : "profile".equals(section) ? " class=\"customer-profile\""
             : "transfer".equals(section) ? " class=\"customer-transfer\""
-            : "cards".equals(section) ? " class=\"customer-cards\"" : "" %>>
+            : "cards".equals(section) ? " class=\"customer-cards\""
+            : "receipt".equals(section) ? " class=\"customer-receipt\"" : "" %>>
 <div class="bank-shell">
     <aside class="bank-sidebar">
         <a class="bank-wordmark" href="<%= base %>/overview">PROERP</a>
@@ -148,6 +151,7 @@
             <% if (transferSource != null) {
                 String transferDestination = (String) request.getAttribute("transferDestination");
                 BigDecimal transferAmount = (BigDecimal) request.getAttribute("transferAmount");
+                String transferNote = (String) request.getAttribute("transferNote");
             %>
                 <section class="bank-panel form-panel">
                     <h2>Review transfer</h2>
@@ -158,6 +162,7 @@
                         <% } %>
                         <div><dt>Recipient account</dt><dd><%= Html.escape(transferDestination) %></dd></div>
                         <div><dt>Amount</dt><dd><%= currency.format(transferAmount) %></dd></div>
+                        <% if (!transferNote.isEmpty()) { %><div><dt>Transfer note</dt><dd><%= Html.escape(transferNote) %></dd></div><% } %>
                     </dl>
                     <form method="post" action="<%= base %>/transfer" class="bank-actions">
                         <input type="hidden" name="_csrf" value="${requestScope.csrfToken}">
@@ -165,6 +170,7 @@
                         <input type="hidden" name="source" value="<%= transferSource.id() %>">
                         <input type="hidden" name="destination" value="<%= Html.escape(transferDestination) %>">
                         <input type="hidden" name="amount" value="<%= transferAmount.toPlainString() %>">
+                        <input type="hidden" name="note" value="<%= Html.escape(transferNote) %>">
                         <button class="bank-button" type="submit">Confirm transfer</button>
                         <a href="<%= base %>/transfer?to=<%= Html.escape(transferDestination) %>">Back to transfer</a>
                     </form>
@@ -207,6 +213,10 @@
                         </label>
                         <label for="amount">Amount (₹)
                             <input id="amount" name="amount" inputmode="decimal" pattern="[0-9]{1,9}([.][0-9]{1,2})?" maxlength="12" required>
+                        </label>
+                        <label for="transfer-note">Transfer note (optional)
+                            <input id="transfer-note" name="note" maxlength="100" aria-describedby="transfer-note-hint">
+                            <span id="transfer-note-hint" class="input-hint">Visible to the recipient and included on the receipt.</span>
                         </label>
                         <button class="bank-button" type="submit" name="stage" value="review">Review transfer</button>
                     </form>
@@ -298,7 +308,9 @@
             <%@ include file="cards.jspf" %>
         <% } else if ("updates".equals(section)) { %>
             <jsp:include page="/WEB-INF/views/customer/notifications.jsp" />
-        <% } else if (List.of("deposits", "bills", "payees", "services", "receipt").contains(section)) { %>
+        <% } else if ("receipt".equals(section)) { %>
+            <%@ include file="transfer-receipt.jspf" %>
+        <% } else if (List.of("deposits", "bills", "payees", "services").contains(section)) { %>
             <%@ include file="customer-services.jspf" %>
         <% } %>
 
