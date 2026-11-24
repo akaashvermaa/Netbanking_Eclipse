@@ -635,6 +635,7 @@ public class CustomerPortalServlet extends HttpServlet {
         String destination = registrationField(request, "destination");
         String amount = request.getParameter("amount");
         String key = request.getParameter("requestKey");
+        String note = registrationField(request, "note");
         boolean review = "review".equals(request.getParameter("stage"));
         String payeeId = registrationField(request, "payee");
         CustomerProductsDao.Payee recipient = null;
@@ -653,6 +654,10 @@ public class CustomerPortalServlet extends HttpServlet {
             redirect(request, response, "/transfer?result=invalid");
             return;
         }
+        if (note.length() > 100 || note.codePoints().anyMatch(Character::isISOControl)) {
+            redirect(request, response, "/transfer?result=invalid_note");
+            return;
+        }
         if (review) {
             var owned = accounts.list(customer.id(), "", "");
             var sender = owned.stream().filter(account -> account.id() == source && "ACTIVE".equals(account.status()))
@@ -667,11 +672,12 @@ public class CustomerPortalServlet extends HttpServlet {
             request.setAttribute("transferDestination", destination);
             if (recipient != null) request.setAttribute("transferRecipient", recipient.name());
             request.setAttribute("transferAmount", new BigDecimal(amount));
+            request.setAttribute("transferNote", note);
             request.setAttribute("requestKey", key);
             request.getRequestDispatcher(VIEWS + "portal.jsp").forward(request, response);
             return;
         }
-        var result = banking.transfer(customer, source, destination, new BigDecimal(amount), key);
+        var result = banking.transfer(customer, source, destination, new BigDecimal(amount), key, note);
         String next = result == CustomerBankingDao.TransferResult.POSTED
                 || result == CustomerBankingDao.TransferResult.DUPLICATE ? "/activity" : "/transfer";
         redirect(request, response, next + "?result=" + result.name().toLowerCase(Locale.ROOT));

@@ -135,17 +135,4 @@
             </ul>
         </section>
     </div>
-<% } else { Receipt receipt = (Receipt) request.getAttribute("receipt"); %>
-    <section class="bank-panel form-panel">
-        <h2><%= receipt.sent() ? "Transfer sent" : "Transfer received" %></h2>
-        <dl class="identity-facts">
-            <div><dt>Reference</dt><dd>T-<%= receipt.id() %></dd></div>
-            <div><dt>Amount</dt><dd><%= currency.format(receipt.amount()) %></dd></div>
-            <div><dt>From</dt><dd><%= Html.escape(receipt.source()) %></dd></div>
-            <div><dt>To</dt><dd><%= Html.escape(receipt.destination()) %></dd></div>
-            <div><dt>Posted</dt><dd><%= receipt.date().format(timestamp) %></dd></div>
-        </dl>
-        <p class="subtle">Simulated PROERP transfer</p>
-        <button class="bank-button secondary print-button" type="button" onclick="window.print()">Print receipt</button>
-    </section>
 <% } %>
