@@ -105,7 +105,7 @@ Admin login credentials and MySQL credentials serve different purposes. For a fr
 | Route below `/PROERP` | What it does |
 |---|---|
 | `/` | Public homepage and banking information. |
-| `/admin/login` and `/admin/logout` | Session login and POST sign-out. Admin passwords use salted PBKDF2. Inactivity timeout is 15 minutes. |
+| `/admin/login` and `/admin/logout` | Explicit sign-in form and POST sign-out. Admin passwords use salted PBKDF2. Inactivity timeout is 30 minutes. |
 | `/admin/password` | Change the signed-in admin's password using the current password. The update is audited and rotates the current session ID and CSRF token. |
 | `/admin/dashboard` | Customer and account counts, oldest-first pending queue, recent activity, borrower list, and finance totals. |
 | `/admin/queue` | Shows only accounts with an explicit flag, a freeze, or suspended customer access. Review pending registrations in Customers. |
@@ -152,7 +152,7 @@ Admin login credentials and MySQL credentials serve different purposes. For a fr
 | JDBC connection refused or communications link failure | Confirm MySQL Server is running on the expected host and port. A CLI sandbox block may report permission denied even when Tomcat can connect. Check Tomcat's exception and distinguish host reachability from tooling restrictions. |
 | `Access denied`, `Unknown database`, or missing table | Confirm JDBC credentials, configured schema, and tables. Apply the missing migration to the correct schema. Avoid logging secrets. |
 | Missing `db.properties` or driver class | Check deployed `WEB-INF/classes/db.properties` and `WEB-INF/lib/mysql-connector-j-26.10.0.jar`. Plain `javac` does not copy resource files. |
-| A form shows “This form expired” | Use the recovery link and reopen the form. Each portal has its own CSRF token and 15-minute idle timer, so signing into the other portal leaves current forms usable. A Tomcat restart can end both sessions. |
+| A form shows “This form expired” | Use the recovery link to reopen the relevant page. Each portal has its own CSRF token and 30-minute idle timer. The standalone launchers use port-specific session cookies so they can run alongside Eclipse at the same hostname. A Tomcat restart can end both sessions. |
 | UI looks unchanged after editing | Compare source and published copies, confirm HTTP is serving the expected stylesheet path, and hard-refresh the browser. Keep shared admin colors neutral and check stylesheet order before adding overrides. |
 | Balance is zero or loan absent | Zero is normal for a new account. Record a simulated deposit or payout through Finance. Check that the account and customer are active, and use the transaction history to verify what was posted. |
 

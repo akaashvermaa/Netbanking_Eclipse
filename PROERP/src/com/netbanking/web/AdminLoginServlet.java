@@ -22,11 +22,6 @@ public class AdminLoginServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        HttpSession session = request.getSession();
-        if (PortalSession.adminActive(session)) {
-            response.sendRedirect(request.getContextPath() + "/admin/dashboard");
-            return;
-        }
         showLogin(request, response, LocalDemo.admin(request));
     }
 

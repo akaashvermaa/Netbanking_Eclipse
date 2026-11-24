@@ -22,17 +22,18 @@ public final class CsrfTokens {
     }
 
     public static String ensure(HttpSession session, Portal portal) {
-        String token = (String) session.getAttribute(portal.attribute);
-        if (token == null) {
-            token = rotate(session, portal);
+        synchronized (session) {
+            String token = (String) session.getAttribute(portal.attribute);
+            return token == null ? rotate(session, portal) : token;
         }
-        return token;
     }
 
     public static String rotate(HttpSession session, Portal portal) {
-        String token = newToken();
-        session.setAttribute(portal.attribute, token);
-        return token;
+        synchronized (session) {
+            String token = newToken();
+            session.setAttribute(portal.attribute, token);
+            return token;
+        }
     }
 
     public static void expiredForm(HttpServletRequest request, HttpServletResponse response, String retryPath)

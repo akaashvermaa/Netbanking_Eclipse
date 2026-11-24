@@ -297,6 +297,9 @@ demo.customer.password=$($secrets.customer)
     $http.SetAttribute('port', [string]$HttpPort)
     $http.SetAttribute('address', '127.0.0.1')
     $config.Save($serverXml)
+    $contexts = Join-Path $run 'conf/Catalina/localhost'
+    New-Item -ItemType Directory -Path $contexts -Force | Out-Null
+    Write-LocalFile (Join-Path $contexts 'PROERP.xml') "<Context sessionCookieName='PROERP_STANDALONE_$HttpPort' />"
 
     $bootstrap = "$(Join-Path $tomcat 'bin/bootstrap.jar');$(Join-Path $tomcat 'bin/tomcat-juli.jar')"
     $javaArgs = @("-Dcatalina.home=$tomcat", "-Dcatalina.base=$run", "-Djava.io.tmpdir=$(Join-Path $run 'temp')",

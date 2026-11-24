@@ -28,8 +28,7 @@ public class CustomerAuthFilter implements Filter {
         request.setAttribute("csrfToken", csrf);
         String path = request.getPathInfo();
         if ("POST".equals(request.getMethod()) && !CsrfTokens.matches(request.getParameter("_csrf"), csrf)) {
-            CsrfTokens.expiredForm(request, response, "/approval".equals(path) ? "/customer/approval"
-                    : signedIn ? "/customer/overview" : "/customer/login");
+            CsrfTokens.expiredForm(request, response, recoveryPath(path, signedIn));
             return;
         }
         boolean publicRoute = "/login".equals(path) || "/register".equals(path) || "/approval".equals(path)
@@ -56,11 +55,21 @@ public class CustomerAuthFilter implements Filter {
         boolean notificationPoll = "GET".equals(request.getMethod()) && "/updates".equals(path)
                 && "popup".equals(request.getParameter("view"));
         if (!notificationPoll) PortalSession.touchCustomer(session);
-        if (customer.passwordChangeRequired() && !"/password".equals(path) && !"/logout".equals(path)) {
+        if (customer.passwordChangeRequired() && !"/password".equals(path) && !"/logout".equals(path)
+                && !"/login".equals(path)) {
             response.sendRedirect(request.getContextPath() + "/customer/password");
             return;
         }
         request.setAttribute("customerIdentity", customer);
         chain.doFilter(request, response);
+    }
+
+    private String recoveryPath(String path, boolean signedIn) {
+        return "/customer" + switch (path == null ? "" : path) {
+            case "/login", "/register", "/approval" -> path;
+            case "/transfer", "/loans", "/bills", "/deposits", "/goals", "/overview",
+                    "/cards", "/payees", "/services", "/password", "/profile" -> signedIn ? path : "/login";
+            default -> signedIn ? "/overview" : "/login";
+        };
     }
 }

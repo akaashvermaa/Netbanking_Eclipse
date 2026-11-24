@@ -5,7 +5,7 @@
          version="6.0">
     <display-name>PROERP Netbanking</display-name>
     <session-config>
-        <session-timeout>15</session-timeout>
+        <session-timeout>30</session-timeout>
         <cookie-config>
             <http-only>true</http-only>
         </cookie-config>
