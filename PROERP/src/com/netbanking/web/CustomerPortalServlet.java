@@ -60,8 +60,9 @@ public class CustomerPortalServlet extends HttpServlet {
         Identity customer = (Identity) request.getAttribute("customerIdentity");
         String path = path(request);
         if ("/login".equals(path) || "/register".equals(path)) {
-            if (customer != null) redirect(request, response, "/overview");
-            else showAccessPage(request, response, "/register".equals(path));
+            boolean registration = "/register".equals(path);
+            if (registration && customer != null) redirect(request, response, "/overview");
+            else showAccessPage(request, response, registration);
             return;
         }
         if ("/approval".equals(path)) {
@@ -283,10 +284,7 @@ public class CustomerPortalServlet extends HttpServlet {
         Identity customer = (Identity) request.getAttribute("customerIdentity");
         try {
             switch (path(request)) {
-                case "/login" -> {
-                    if (customer != null) redirect(request, response, "/overview");
-                    else signIn(request, response);
-                }
+                case "/login" -> signIn(request, response);
                 case "/register" -> {
                     if (customer != null) redirect(request, response, "/overview");
                     else register(request, response);
@@ -511,8 +509,9 @@ public class CustomerPortalServlet extends HttpServlet {
 
     private void startWaiting(HttpServletRequest request, HttpServletResponse response, Pending pending) throws IOException {
         request.changeSessionId();
-        request.getSession().setAttribute("pendingCustomer", pending);
-        CsrfTokens.rotate(request.getSession(), CUSTOMER);
+        HttpSession session = request.getSession();
+        PortalSession.clearCustomer(session);
+        session.setAttribute("pendingCustomer", pending);
         redirect(request, response, "/approval");
     }
 

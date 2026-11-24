@@ -6,7 +6,7 @@ import static com.netbanking.security.CsrfTokens.Portal.ADMIN;
 import static com.netbanking.security.CsrfTokens.Portal.CUSTOMER;
 
 public final class PortalSession {
-    private static final long IDLE_MILLIS = Duration.ofMinutes(15).toMillis();
+    private static final long IDLE_MILLIS = Duration.ofMinutes(30).toMillis();
 
     private PortalSession() {}
 

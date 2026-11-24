@@ -12,8 +12,8 @@
     <main class="login-content">
         <section class="bank-panel form-panel">
             <h1>This form expired</h1>
-            <p class="subtle">Open a fresh page and try again. Your changes were not submitted.</p>
-            <a class="bank-button" href="<%= Html.escape((String) request.getAttribute("retryPath")) %>">Continue to PROERP</a>
+            <p class="subtle">Your changes were not submitted. Reopen the page to get a fresh form.</p>
+            <a class="bank-button" href="<%= Html.escape((String) request.getAttribute("retryPath")) %>">Reopen page</a>
         </section>
     </main>
 </body>

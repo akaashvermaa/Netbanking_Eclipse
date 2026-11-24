@@ -278,6 +278,8 @@ sed -e 's/<Server port="8005" /<Server port="-1" /' \
     "$tomcat/conf/server.xml" > "$run/conf/server.xml"
 grep -Fq "port=\"$http_port\" address=\"127.0.0.1\"" "$run/conf/server.xml" || die 'Could not configure the Tomcat HTTP connector.'
 grep -Fq '<Server port="-1"' "$run/conf/server.xml" || die 'Could not configure Tomcat shutdown.'
+mkdir -p -- "$run/conf/Catalina/localhost"
+printf '<Context sessionCookieName="PROERP_STANDALONE_%s" />\n' "$http_port" > "$run/conf/Catalina/localhost/PROERP.xml"
 "$JAVA_HOME/bin/java" "-Dcatalina.home=$tomcat" "-Dcatalina.base=$run" "-Djava.io.tmpdir=$run/temp" \
     "-Djava.util.logging.config.file=$run/conf/logging.properties" \
     -Djava.util.logging.manager=org.apache.juli.ClassLoaderLogManager \

@@ -219,6 +219,37 @@
 .admin-shell .sidebar-footer .button:hover { background: #e5e1d7; }
 
 /* Shared operations workspace */
+.dashboard-balance-summary { margin-bottom: 20px; }
+.dashboard-balance-summary h2 { margin: 0 0 10px; font-size: 16px; }
+.dashboard-balance-summary .workspace-subtitle { margin: 8px 0 0; }
+.dashboard-balance-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.dashboard-balance-card {
+    display: grid;
+    grid-template-rows: auto 1fr auto auto;
+    gap: 10px;
+    min-width: 0;
+    padding: clamp(16px, 2vw, 24px);
+    border: 1px solid var(--console-line);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--console-ink);
+    text-decoration: none;
+}
+.dashboard-balance-card:first-child { background: #f4f2eb; }
+.dashboard-balance-card:hover { border-color: #a49b87; }
+.dashboard-balance-card:hover .dashboard-balance-label { text-decoration: underline; text-underline-offset: 4px; }
+.dashboard-balance-label { font-size: 14px; font-weight: 650; }
+.dashboard-balance-value {
+    font-size: clamp(26px, 3.3vw, 44px);
+    line-height: 1.12;
+    letter-spacing: -.035em;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+.dashboard-balance-card .workspace-bar-track { height: 6px; background: #e7e3d9; }
+.dashboard-balance-card .workspace-bar { background: #827562; }
+.dashboard-balance-card:first-child .workspace-bar { background: #4e5045; }
+.dashboard-balance-context { font-size: 13px; color: var(--console-muted); }
 .workspace-kpis {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
@@ -240,6 +271,8 @@
 .workspace-kpis strong { font-size: clamp(22px, 2.4vw, 32px); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 .workspace-kpis span, .workspace-kpis small { color: var(--console-muted); font-weight: 600; }
 .workspace-kpis .workspace-kpi-review { background: #fbf3df; border-color: #e8d6af; }
+.dashboard-queue-counts a { flex-direction: row; justify-content: space-between; align-items: center; padding-block: 10px; }
+.dashboard-queue-counts strong { font-size: 20px; }
 .workspace-analytics { margin-top: 0; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; }
 .workspace-subtitle, .workspace-empty { color: var(--console-muted); font-size: 13px; line-height: 1.55; }
 .workspace-empty { padding: 10px 12px; border: 1px solid var(--console-line); border-radius: 8px; background: #faf9f5; }
@@ -254,8 +287,6 @@
 .series-0, .principal-repaid { background: #557561; }
 .series-1, .principal-remaining { background: #996529; }
 .series-2 { background: #655d50; }
-.workspace-comparison { display: grid; gap: 15px; margin-block: 17px; }
-.workspace-bar-caption { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px; margin-bottom: 7px; font-size: 13px; }
 .workspace-principal-bar { display: flex; height: 13px; margin-top: 13px; border-radius: 5px; overflow: hidden; background: #eeece4; }
 .workspace-table, .workspace-picker { margin-block: 0 18px; }
 .workspace-activity { margin-top: 18px; }
@@ -279,6 +310,9 @@
 @media (max-width: 460px) {
     .workspace-flow-day { grid-template-columns: 1fr; gap: 5px; }
     .workspace-flow-series { grid-template-columns: 72px minmax(18px, 1fr) max-content; column-gap: 6px; }
+}
+@media (max-width: 560px) {
+    .dashboard-balance-cards { grid-template-columns: 1fr; }
 }
 
 .console-entry-panel { max-width: 720px; }

@@ -1,5 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ page import="java.util.List,java.math.BigDecimal,java.time.format.DateTimeFormatter,com.netbanking.model.AdminDashboardStats,com.netbanking.model.AdminAuditEntry,com.netbanking.dao.FinanceDao,com.netbanking.util.Html" %>
+<%@ page import="java.text.NumberFormat,java.util.Locale" %>
 <%
     String context = request.getContextPath();
     FinanceDao.Totals totals = (FinanceDao.Totals) request.getAttribute("financeTotals");
@@ -10,6 +11,7 @@
     List<AdminAuditEntry> activity = (List<AdminAuditEntry>) request.getAttribute("recentActivity");
     DateTimeFormatter dayLabel = DateTimeFormatter.ofPattern("dd MMM");
     DateTimeFormatter timeLabel = DateTimeFormatter.ofPattern("dd MMM, HH:mm");
+    NumberFormat money = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("en-IN"));
     BigDecimal peak = BigDecimal.ZERO;
     if (dailyFlow != null) {
         for (FinanceDao.DailyFlow flow : dailyFlow) {
@@ -24,7 +26,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Operations overview | PROERP Admin</title>
     <link rel="stylesheet" href="<%= context %>/assets/css/app.css">
-    <link rel="stylesheet" href="<%= context %>/assets/css/admin-console.css?v=workspace">
+    <link rel="stylesheet" href="<%= context %>/assets/css/admin-console.css?v=balance-overview">
 </head>
 <body class="admin-shell">
 <%@ include file="navigation.jspf" %>
@@ -36,11 +38,35 @@
     <% if (request.getAttribute("errorMessage") != null) { %>
         <p class="notice error" role="alert"><%= Html.escape((String) request.getAttribute("errorMessage")) %></p>
     <% } %>
-    <section class="workspace-kpis" aria-label="Key figures">
-        <% if (totals != null) { %>
-            <a href="<%= context %>/admin/customers"><span>Customer balances</span><strong>₹<%= totals.balances().toPlainString() %></strong></a>
-            <a href="<%= context %>/admin/finance?loanStatus=OPEN#loan-register"><span>Outstanding principal</span><strong>₹<%= totals.outstanding().toPlainString() %></strong><small><%= totals.openLoans() %> open loans</small></a>
-        <% } %>
+    <% if (totals != null) {
+        BigDecimal comparisonPeak = totals.balances().max(totals.outstanding());
+        BigDecimal[] amounts = {totals.balances(), totals.outstanding()};
+        String[] labels = {"Customer balances", "Outstanding principal"};
+        String[] destinations = {"/admin/customers", "/admin/finance?loanStatus=OPEN#loan-register"};
+        long openLoans = totals.openLoans();
+        String[] contextLabels = {"Total across customer accounts", openLoans == 1 ? "1 open loan" : openLoans + " open loans"};
+    %>
+        <section class="dashboard-balance-summary" aria-labelledby="dashboard-balances-heading">
+            <h2 id="dashboard-balances-heading">Balances and lending</h2>
+            <div class="dashboard-balance-cards">
+                <% for (int index = 0; index < amounts.length; index++) {
+                    BigDecimal amount = amounts[index];
+                    BigDecimal share = comparisonPeak.signum() == 0 ? BigDecimal.ZERO
+                            : amount.multiply(BigDecimal.valueOf(100)).divide(comparisonPeak, 3, java.math.RoundingMode.HALF_UP);
+                %>
+                    <a class="dashboard-balance-card" href="<%= context + destinations[index] %>">
+                        <span class="dashboard-balance-label"><%= labels[index] %></span>
+                        <strong class="dashboard-balance-value"><%= money.format(amount) %></strong>
+                        <span class="workspace-bar-track" aria-hidden="true"><span class="workspace-bar" style="width:<%= share.toPlainString() %>%"></span></span>
+                        <span class="dashboard-balance-context"><%= contextLabels[index] %></span>
+                    </a>
+                <% } %>
+            </div>
+            <p class="workspace-subtitle">Customer balances include loan proceeds still in those accounts.</p>
+        </section>
+    <% } %>
+    <% if (issueCount != null || stats != null) { %>
+    <section class="workspace-kpis dashboard-queue-counts" aria-label="Review queues">
         <% if (issueCount != null) { %>
             <a class="workspace-kpi-review" href="<%= context %>/admin/queue"><span>Accounts needing review</span><strong><%= issueCount %></strong></a>
         <% } %>
@@ -48,6 +74,7 @@
             <a href="<%= context %>/admin/customers?status=PENDING"><span>Pending registrations</span><strong><%= stats.pendingCustomers() %></strong></a>
         <% } %>
     </section>
+    <% } %>
     <div class="workspace-grid workspace-analytics">
         <% if (dailyFlow != null) { %>
         <section class="panel" aria-labelledby="flow-heading">
@@ -69,7 +96,7 @@
                                        if (amount.signum() > 0) width = Math.max(1, width); %>
                                     <span class="workspace-flow-label"><%= series[number] %></span>
                                     <span class="workspace-bar-track" aria-hidden="true"><span class="workspace-bar series-<%= number %>" style="width:<%= width %>%"></span></span>
-                                    <span class="workspace-amount">₹<%= amount.toPlainString() %></span>
+                                    <span class="workspace-amount"><%= money.format(amount) %></span>
                                 <% } %>
                             </div>
                         </div>
@@ -78,30 +105,15 @@
             <% } %>
         </section>
         <% } %>
-        <% if (totals != null) {
-               BigDecimal comparisonPeak = totals.balances().max(totals.outstanding()).max(BigDecimal.ONE);
-               BigDecimal[] values = {totals.balances(), totals.outstanding()};
-               String[] labels = {"Customer account balances", "Outstanding principal"}; %>
+        <% if (totals != null) { %>
             <section class="panel" aria-labelledby="snapshot-heading">
-                <div class="console-panel-heading"><h2 id="snapshot-heading">Balances and open loans</h2><span class="muted">Current totals</span></div>
-                <div class="workspace-comparison">
-                <% for (int number = 0; number < values.length; number++) {
-                       int width = values[number].multiply(BigDecimal.valueOf(100)).divide(comparisonPeak, 0, java.math.RoundingMode.HALF_UP).intValue();
-                       if (values[number].signum() > 0) width = Math.max(1, width); %>
-                    <div>
-                        <div class="workspace-bar-caption"><span><%= labels[number] %></span><strong>₹<%= values[number].toPlainString() %></strong></div>
-                        <div class="workspace-bar-track" aria-hidden="true"><span class="workspace-bar series-<%= number %>" style="width:<%= width %>%"></span></div>
-                    </div>
-                <% } %>
-                </div>
-                <p class="workspace-subtitle">Customer balances include loan proceeds still in those accounts.</p>
-                <div class="console-panel-heading"><h2>Recent open loans</h2><a href="<%= context %>/admin/finance?loanStatus=OPEN#loan-register">All open loans</a></div>
+                <div class="console-panel-heading"><h2 id="snapshot-heading">Recent open loans</h2></div>
                 <% if (loans != null && !loans.isEmpty()) { %>
                     <ul class="overview-list">
                         <% for (FinanceDao.Loan loan : loans) { %>
                             <li class="queue-item">
                                 <a class="workspace-record-link" href="<%= context %>/admin/finance?accountId=<%= loan.accountId() %>#loan-<%= loan.id() %>"><%= Html.escape(loan.customer()) %></a>
-                                <span class="workspace-amount">₹<%= loan.outstanding().toPlainString() %> due</span>
+                                <span class="workspace-amount"><%= money.format(loan.outstanding()) %> principal due</span>
                             </li>
                         <% } %>
                     </ul>
